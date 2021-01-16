@@ -131,12 +131,14 @@ allprojects {
 }
 
 jar {
+    enabled(false)
+    archiveClassifier.set('core')
     dependsOn( shadowJar )
 }
 
 shadowJar {
     mergeServiceFiles()
-    archiveClassifier.set('all')
+    archiveClassifier.set('')
     doLast {
         logger.lifecycle("Shadow jar:" + outputs.files.first())
     }
