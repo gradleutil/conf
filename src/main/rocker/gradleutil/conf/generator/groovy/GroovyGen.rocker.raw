@@ -1,0 +1,34 @@
+@option discardLogicWhitespace=true
+@import gradleutil.conf.template.EPackage
+@import com.fizzed.rocker.Rocker
+
+@args(EPackage javaClassTemplate)
+package @javaClassTemplate.name
+
+import groovy.transform.AnnotationCollector
+import groovy.transform.EqualsAndHashCode
+import groovy.transform.ToString
+@*
+
+import com.typesafe.config.Config
+import com.typesafe.config.ConfigFactory
+import gradleutil.conf.Loader
+
+class ConfigConf {
+    static final Config conf = ConfigFactory.load( '@(javaClassTemplate.name)' )
+    def resource = ConfigConf.classLoader.getResource('@(javaClassTemplate.name)')
+    Loader.create(resource, @javaClassTemplate.classes.stream().findFirst().get().name)
+}
+*@
+
+@@EqualsAndHashCode
+@@ToString
+@@AnnotationCollector
+@@interface EClassAnnotation { }
+
+@@interface Optional { }
+
+@for (configClass : javaClassTemplate.classes) {
+@Rocker.template("gradleutil/conf/generator/groovy/GroovyClass.rocker.raw", configClass)
+}
+

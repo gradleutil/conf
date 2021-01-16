@@ -1,0 +1,145 @@
+buildscript {
+    repositories {
+        jcenter()
+    }
+    dependencies {
+        classpath 'gradleutil:conf-template:+'
+    }
+}
+
+plugins {
+    id 'java-library'
+    id 'groovy'
+    id 'maven-publish'
+    id 'nu.studer.rocker' version '2.2'
+//    id "com.fizzed.rocker" version "1.2.3"
+    id 'com.github.johnrengelman.shadow' version '6.0.0'
+    id "org.ajoberstar.grgit" version "4.1.0"
+}
+
+repositories {
+    jcenter()
+    maven { url "https://jitpack.io" }
+}
+
+def getScmVersion = {
+    def git = Grgit.open(dir: file('.'))
+    def describedCommit = gfile('VERSION').text.with{versionText ->
+    if(!versionText == version){
+        logger.lifecycle("Updated version ${versionText} to ${version}")
+        file('VERSION').text = version
+    }
+}
+it.describe().toString().trim()
+    def masterRevision = git.resolve.toCommit(git.resolve.toBranch('master')).id
+    def isSnapshot = masterRevision != git.head().id
+    return describedCommit.replaceAll("(.*)-[0-9]+-g[0-9a-f]{7}(.*)", '$1$2') + (isSnapshot ? "-SNAPSHOT" : "")
+}
+
+version = project.findProperty('version') ?: getScmVersion() ?: '0.0.1-SNAPSHOT'
+
+file('VERSION').text.with{versionText ->
+    if(!versionText == version){
+        logger.lifecycle("Updated version ${versionText} to ${version}")
+        file('VERSION').text = version
+    }
+}
+
+dependencies {
+    implementation 'com.typesafe:config:1.4.0'
+    implementation 'com.fizzed:rocker-runtime:1.2.3'
+    implementation 'org.json:json:20200518'
+    implementation 'com.github.everit-org.json-schema:org.everit.json.schema:1.12.1'
+    implementation 'gradleutil:conf-template:+'
+    shadow localGroovy()
+    testImplementation 'org.spockframework:spock-core:1.3-groovy-2.5'
+}
+
+task deleteGeneratedTestData(type: Delete) {
+    def tempDir = file('src/test/groovy/gradleutil/conf/temp')
+    outputs.upToDateWhen { !tempDir.exists() }
+    delete tempDir
+}
+
+compileGroovy.dependsOn(deleteGeneratedTestData)
+
+
+/*
+task generateModelGenerationOptions(type: JavaExec) {
+    def outDir = file("src/main/java/gradleutil/conf/impl/")
+    outDir.mkdirs()
+    outputs.dir(outDir)
+    inputs.file(file('src/main/resources/reference.conf'))
+    classpath = files(configurations.embedded.files)
+    main('tscfg.Main')
+    args '--spec', 'src/main/resources/reference.conf',
+            "--pn", 'gradleutil.conf.impl',
+            "--cn", 'ModelGenerationOptions',
+            "--dd",outDir.path
+}
+
+compileJava.source generateModelGenerationOptions.outputs.files, sourceSets.main.java
+*/
+
+/*
+sourceSets.main.rocker.srcDir('src/main/rocker')
+rocker {
+    failOnError true
+    skipTouch true
+    // must not be empty when skipTouch is equal to false
+    touchFile ""
+    javaVersion '1.8'
+    extendsClass null
+    extendsModelClass null
+    optimize null
+    discardLogicWhitespace true
+    targetCharset null
+    suffixRegex null
+    postProcessing null
+}
+*/
+rocker {
+    main {
+        templateDir = file('src/main/rocker')
+        outputDir = file("${buildDir}/generated-src/rocker")
+        optimize = true  // optional
+    }
+}
+
+jar {
+    dependsOn( shadowJar )
+}
+
+shadowJar {
+    mergeServiceFiles()
+    archiveClassifier.set('all')
+    doLast {
+        logger.lifecycle("Shadow jar:" + outputs.files.first())
+    }
+}
+
+task artifactList {
+    group = "Help"
+    description = "Displays the artifacts associated with each configuration of " + project
+    doFirst {
+        configurations.findAll().each { config ->
+            println "${config}:"
+            config.allArtifacts.getFiles().each { file -> println " " + file }
+            config.dependencies.each{ dep -> println " dep:" + dep.toString()}
+            println ' '
+        }
+    }
+}
+
+publishing {
+    publications {
+        shadow(MavenPublication) { publication ->
+            project.shadow.component(publication)
+        }
+    }
+    repositories {
+        maven {
+            url "${buildDir}/repo"
+        }
+    }
+}

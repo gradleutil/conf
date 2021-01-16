@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>edit config</title>
+    <link rel="stylesheet" id="theme" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+    <script crossorigin src="https://unpkg.com/react@16/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@16/umd/react-dom.production.min.js"></script>
+    <script type="application/javascript" src="https://unpkg.com/@babel/standalone@7/babel.min.js"></script>
+    <script src="https://unpkg.com/react-jsonschema-form/dist/react-jsonschema-form.js"></script>
+    <script src="https://unpkg.com/react-tabs@3/dist/react-tabs.production.min.js"></script>
+    <link href="https://unpkg.com/react-tabs@3/style/react-tabs.css" rel="stylesheet">
+    <style>
+        #root fieldset {
+            border: 1px solid gray;
+            padding: 5px
+        }
+    </style>
+</head>
+<body>
+<div class="page-body">
+    <div class="container">
+        <div id="main"></div>
+    </div>
+</div>
+<script type="text/babel">
+	const {Tabs, TabList, Tab, TabPanel} = ReactTabs;
+	const Form = JSONSchemaForm.default;
+
+	const schema = @schema;
+
+	const serverOptions = @formData;
+
+	const uiSchema = {
+		name: {
+			"ui:autofocus": true,
+			"ui:emptyValue": "",
+		},
+		password: {
+			"ui:widget": "password",
+			"ui:help": "Hint: Make it strong!",
+		},
+	};
+
+	const App = class App extends React.Component {
+		constructor(props) {
+			super(props);
+			this.handleChange = this.handleChange.bind(this);
+			this.handleBlur = this.handleBlur.bind(this);
+			this.handleSubmit = this.handleSubmit.bind(this);
+			this.handleCheckboxToggle = this.handleCheckboxToggle.bind(this);
+			this.handleLoadServerOptions = this.handleLoadServerOptions.bind(this);
+			this.getService = this.getService.bind(this);
+			this.getServiceSchema = this.getServiceSchema.bind(this);
+			this.getJsonSchema = this.getJsonSchema.bind(this);
+			this.state = {
+				formContext: {},
+				service: {},
+				serviceSchema: {},
+				jsonSchema: {},
+				formData: {}
+			};
+		}
+
+		getService() {
+			return fetch("/service", {method: 'GET'}).then(resp => {
+				return resp.json()
+			}).then(data => {
+				this.setState({service: data});
+			}).catch((error) => {
+				// handle your errors here
+				console.error("Error getting service data");
+				console.error(error)
+			});
+		}
+
+		getServiceSchema() {
+			return fetch("/serviceSchema", {method: 'GET'}).then(resp => {
+				return resp.json()
+			}).then(data => {
+				this.setState({serviceSchema: data});
+			}).catch((error) => {
+				// handle your errors here
+				console.error("Error getting service schema");
+				console.error(error)
+			});
+		}
+
+		getJsonSchema() {
+			return fetch("http://json-schema.org/draft-07/schema#", {method: 'GET'}).then(resp => {
+				return resp.json()
+			}).then(data => {
+				this.setState({jsonSchema: data});
+			}).catch((error) => {
+				// handle your errors here
+				console.error("Error getting json schema");
+				console.error(error)
+			});
+		}
+
+		async componentDidMount() {
+			await this.getService();
+			await this.getServiceSchema()
+			await this.getJsonSchema()
+		}
+
+		handleChange({formData}) {
+			this.setState({formData: Object.assign({}, formData)});
+		}
+
+		handleBlur(id) {
+			if (this.state.setStateOnBlur) {
+				const formContext = Object.assign({}, this.state.formContext);
+				formContext[id] = true;
+				this.setState({formContext});
+			}
+		}
+
+		handleLoadServerOptions(e) {
+			this.setState({formData: serverOptions});
+		}
+
+		handleSubmit(data) {
+			// not important
+			return false;
+		}
+
+		handleCheckboxToggle(e) {
+			this.setState({
+				setStateOnBlur: e.target.checked
+			})
+		}
+
+		render() {
+			return (
+				<Tabs>
+					<TabList>
+						<Tab>Edit</Tab>
+						<Tab>JSON</Tab>
+						<Tab>Schema</Tab>
+					</TabList>
+					<TabPanel>
+						<div>
+							<button class="btn" onClick={this.handleLoadServerOptions}>load</button>
+							<Form
+								safeRenderCompletion={true}
+								formData={this.state.formData}
+								formContext={this.state.formContext}
+								schema={schema}
+								uiSchema={uiSchema}
+								onChange={this.handleChange}
+								onSubmit={this.handleSubmit}
+								onBlur={this.handleBlur}
+							/>
+						</div>
+					</TabPanel>
+					<TabPanel>
+						<pre>{JSON.stringify(this.state.formData, undefined, 2, 2)}</pre>
+					</TabPanel>
+					<TabPanel>
+						<div>
+							<Form
+								safeRenderCompletion={true}
+								formData={schema}
+								formContext={this.state.formContext}
+								schema={this.state.jsonSchema}
+								uiSchema={uiSchema}
+								onChange={this.handleChange}
+								onSubmit={this.handleSubmit}
+								onBlur={this.handleBlur}
+							/>
+						</div>
+					</TabPanel>
+				</Tabs>
+			);
+		}
+	};
+
+	ReactDOM.render(<App/>, document.getElementById("main"));
+</script>
+</body>
+</html>

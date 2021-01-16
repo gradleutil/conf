@@ -1,0 +1,243 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$ref": "#/definitions/EPackage",
+    "definitions": {
+        "Detail": {
+            "type": "object",
+            "required": [
+                "key",
+                "value"
+            ],
+            "properties": {
+                "key": {"type": "string"},
+                "value": {
+                    "type": "string",
+                    "format": "uri"
+                }
+            }
+        },
+        "EAnnotation": {
+            "type": "object",
+            "required": [
+                "details",
+                "source"
+            ],
+            "properties": {
+                "details": {
+                    "type": "array",
+                    "items": {"$ref": "#/definitions/Detail"},
+                    "minItems": 1
+                },
+                "source": {
+                    "type": "string",
+                    "format": "uri"
+                }
+            }
+        },
+        "ETypeArgument": {
+            "type": "object",
+            "properties": {
+                "eClassifier": {
+                    "type": [
+                        "string",
+                        "number",
+                        "integer",
+                        "boolean",
+                        "null"
+                    ]
+                }
+            }
+        },
+        "EGenericType": {
+            "type": "object",
+            "required": [
+                "eTypeArguments",
+                "eClassifier"
+            ],
+            "properties": {
+                "eTypeArguments": {"$ref": "#/definitions/ETypeArgument"},
+                "eClassifier": {
+                    "type": [
+                        "string",
+                        "number",
+                        "integer",
+                        "boolean",
+                        "null"
+                    ]
+                }
+            }
+        },
+        "EStructuralFeature": {
+            "type": "object",
+            "required": [
+                "eAnnotations",
+                "eGenericType",
+                "name",
+                "type"
+            ],
+            "properties": {
+                "eAnnotations": {"$ref": "#/definitions/EAnnotation"},
+                "eGenericType": {"$ref": "#/definitions/EGenericType"},
+                "changeable": {"type": "boolean"},
+                "containment": {"type": "boolean"},
+                "defaultValueLiteral": {"type": "boolean"},
+                "derived": {"type": "boolean"},
+                "eOpposite": {
+                    "type": [
+                        "string",
+                        "number",
+                        "integer",
+                        "boolean",
+                        "null"
+                    ]
+                },
+                "eType": {
+                    "type": [
+                        "string",
+                        "number",
+                        "integer",
+                        "boolean",
+                        "null"
+                    ]
+                },
+                "lowerBound": {"type": "integer"},
+                "name": {"type": "string"},
+                "resolveProxies": {"type": "boolean"},
+                "_transient": {"type": "boolean"},
+                "unsettable": {"type": "boolean"},
+                "upperBound": {"type": "integer"},
+                "_volatile": {"type": "boolean"},
+                "type": {"type": "string"}
+            }
+        },
+        "ETypeParameter": {
+            "type": "object",
+            "required": ["name"],
+            "properties": {
+                "name": {"type": "string"}
+            }
+        },
+        "EParameter": {
+            "type": "object",
+            "required": ["name"],
+            "properties": {
+                "eGenericType": {"$ref": "#/definitions/EGenericType"},
+                "eType": {
+                    "type": [
+                        "string",
+                        "number",
+                        "integer",
+                        "boolean",
+                        "null"
+                    ]
+                },
+                "name": {"type": "string"}
+            }
+        },
+        "EOperation": {
+            "type": "object",
+            "required": [
+                "eGenericType",
+                "name"
+            ],
+            "properties": {
+                "eGenericType": {"$ref": "#/definitions/EGenericType"},
+                "eParameters": {
+                    "type": "array",
+                    "items": {"$ref": "#/definitions/EParameter"},
+                    "minItems": 0
+                },
+                "eExceptions": {
+                    "type": [
+                        "string",
+                        "number",
+                        "integer",
+                        "boolean",
+                        "null"
+                    ]
+                },
+                "eType": {
+                    "type": [
+                        "string",
+                        "number",
+                        "integer",
+                        "boolean",
+                        "null"
+                    ]
+                },
+                "name": {"type": "string"}
+            }
+        },
+        "EClassifier": {
+            "type": "object",
+            "required": [
+                "name",
+                "type"
+            ],
+            "properties": {
+                "eTypeParameters": {
+                    "type": "array",
+                    "items": {"$ref": "#/definitions/ETypeParameter"},
+                    "minItems": 0
+                },
+                "eAnnotations": {"$ref": "#/definitions/EAnnotation"},
+                "eOperations": {
+                    "type": "array",
+                    "items": {"$ref": "#/definitions/EOperation"},
+                    "minItems": 0
+                },
+                "eStructuralFeatures": {
+                    "type": "array",
+                    "items": {"$ref": "#/definitions/EStructuralFeature"},
+                    "minItems": 0
+                },
+                "_abstract": {"type": "boolean"},
+                "eSuperTypes": {
+                    "type": [
+                        "string",
+                        "number",
+                        "integer",
+                        "boolean",
+                        "null"
+                    ]
+                },
+                "instanceClassName": {
+                    "type": [
+                        "string",
+                        "number",
+                        "integer",
+                        "boolean",
+                        "null"
+                    ]
+                },
+                "name": {"type": "string"},
+                "serializable": {"type": "boolean"},
+                "type": {"type": "string"}
+            }
+        },
+        "EPackage": {
+            "type": "object",
+            "required": [
+                "eClassifiers",
+                "name",
+                "nsPrefix",
+                "nsURI",
+                "version"
+            ],
+            "properties": {
+                "eClassifiers": {
+                    "type": "array",
+                    "items": {"$ref": "#/definitions/EClassifier"},
+                    "minItems": 1
+                },
+                "name": {"type": "string"},
+                "nsPrefix": {"type": "string"},
+                "nsURI": {
+                    "type": "string",
+                    "format": "uri"
+                },
+                "version": {"type": "number"}
+            }
+        }
+    }
+}

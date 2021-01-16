@@ -1,0 +1,27 @@
+@option discardLogicWhitespace=true
+@import com.fizzed.rocker.Rocker
+@import static gradleutil.conf.template.EPackage.EClass
+
+@args(EClass javaClassTemplate)
+
+@@EClassAnnotation
+class @javaClassTemplate.name {
+
+@for (prop : javaClassTemplate.features) {
+  @if (prop.lowerBound > 0) {@@Optional } @if(prop.etype == "enum") {
+@prop.etype @prop.name @prop.asEnum()
+} else {
+@prop.etype @prop.name @with? (s = prop.defaultValue) { = @prop.defaultValue }
+}
+
+}
+
+  @Rocker.template("gradleutil/conf/generator/groovy/GroovyClassConstructor.rocker.raw", javaClassTemplate)
+@*
+  @javaClassTemplate.name from( @@DelegatesTo( value = @javaClassTemplate.name, strategy = Closure.DELEGATE_FIRST ) Closure<?> configurer ) {
+    configurer.rehydrate( this, this, this ).call()
+    return this
+  }
+*@
+}
+

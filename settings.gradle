@@ -1,0 +1,6 @@
+rootProject.name = 'conf'
+includeBuild('conf-template') {
+    dependencySubstitution{
+        substitute module( 'gradleutil:conf-template' ) with project( ':' )
+    }
+}

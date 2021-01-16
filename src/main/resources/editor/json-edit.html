@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>Basic JSON Editor Example</title>
+    <link href="https://cdn.jsdelivr.net/npm/@json-editor/json-editor@latest/dist/css/jsoneditor.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@trevoreyre/autocomplete-js@latest/dist/style.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@3.2.1/css/font-awesome.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/flag-icon-css/3.3.0/css/flag-icon.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@latest/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <script src="https://cdn.jsdelivr.net/npm/@json-editor/json-editor@latest/dist/jsoneditor.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@trevoreyre/autocomplete-js@latest/dist/autocomplete.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@latest/dist/purify.min.js"></script>
+    <script>
+		// includeCSS("https://cdnjs.cloudflare.com/ajax/libs/flag-icon-css/3.3.0/css/flag-icon.css")
+
+		var jseditor;
+		// Global callback list
+		window.JSONEditor.defaults.callbacks = {
+			"autocomplete": {
+
+				// Setup for Wikipedia lookup
+				"search_wikipedia": function search(jseditor_editor, input) {
+					var url = 'https://en.wikipedia.org/w/api.php?action=query&list=search&format=json&origin=*&srsearch=' + encodeURI(input);
+
+					return new Promise(function (resolve) {
+						if (input.length < 3) {
+							return resolve([]);
+						}
+						fetch(url).then(function (response) {
+							return response.json();
+						}).then(function (data) {
+							resolve(data.query.search);
+						});
+					});
+				},
+				"getResultValue_wikipedia": function getResultValue(jseditor_editor, result) {
+					return result.title;
+				},
+				"renderResult_wikipedia": function (jseditor_editor, result, props) {
+					return ['<li ' + props + '>',
+						'<div class="wiki-title">' + result.title + '</div>',
+						'<div class="wiki-snippet"><small>' + result.snippet + '<small></div>',
+						'</li>'].join('');
+				}
+			}
+		};
+                </script>
+</head>
+<body>
+
+<div id='editor_holder'></div>
+
+<script>
+	var jedata = {
+		schema: {
+			type: "object",
+			title: "Car",
+			properties: {
+				"text": {
+					"type": "string",
+					"format": "autocomplete",
+					"title": "Wikipedia lookup (Page titles)",
+					"description": "Enter a text of minimum 3 characters.",
+					"options": {
+						"grid_columns": 6,
+						"autocomplete": {
+							"search": "search_wikipedia",
+							"getResultValue": "getResultValue_wikipedia",
+							"renderResult": "renderResult_wikipedia",
+							"autoSelect": true
+						}
+					}
+				}
+			}
+		}
+	};
+
+	// The following lines are mandatory and readonly. You can add custom code above and below.
+	if (jseditor instanceof window.JSONEditor) jseditor.destroy();
+	jseditor = new window.JSONEditor(document.querySelector("#editor_holder"), jedata);
+</script>
+</body>
+</html>
+
