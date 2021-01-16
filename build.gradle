@@ -1,9 +1,19 @@
+import static org.apache.tools.ant.taskdefs.condition.Os.*
+
 buildscript {
     repositories {
         jcenter()
     }
+    def templateLib = file(buildDir.path + '/conf-template/libs/conf-template.jar')
+    if(!templateLib.exists()){
+        if(isFamily(FAMILY_WINDOWS)){
+            "./gradlew.bat -b conf-template jar".execute()
+        } else {
+            "./gradlew -b conf-template/build.gradle jar".execute()
+        }
+    }
     dependencies {
-        classpath 'gradleutil:conf-template:+'
+        file templateLib
     }
 }
 
@@ -11,10 +21,11 @@ plugins {
     id 'java-library'
     id 'groovy'
     id 'maven-publish'
-    id 'nu.studer.rocker' version '2.2'
+    id 'nu.studer.rocker' version '3.0.2'
 //    id "com.fizzed.rocker" version "1.2.3"
     id 'com.github.johnrengelman.shadow' version '6.0.0'
     id "org.ajoberstar.grgit" version "4.1.0"
+
 }
 
 repositories {
@@ -98,11 +109,24 @@ rocker {
     postProcessing null
 }
 */
+
 rocker {
-    main {
-        templateDir = file('src/main/rocker')
-        outputDir = file("${buildDir}/generated-src/rocker")
-        optimize = true  // optional
+    configurations{
+        main {
+            templateDir = file('src/main/rocker')
+            outputDir = file("${buildDir}/generated-src/rocker")
+            optimize = true
+        }
+    }
+}
+
+allprojects {
+    plugins.withType(BasePlugin) {
+        project.afterEvaluate {
+            def deleteTasks = tasks.withType(Delete) + project.tasks.findByPath('clean')
+            def otherTasks = tasks - deleteTasks
+            otherTasks*.mustRunAfter deleteTasks
+        }
     }
 }
 
@@ -135,11 +159,6 @@ publishing {
     publications {
         shadow(MavenPublication) { publication ->
             project.shadow.component(publication)
-        }
-    }
-    repositories {
-        maven {
-            url "${buildDir}/repo"
         }
     }
 }
