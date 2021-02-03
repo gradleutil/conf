@@ -18,6 +18,9 @@ class Loader {
     }
 
     static Config parse(File configFile) {
+        if(!configFile.exists()){
+            throw new FileNotFoundException("config file '${configFile.absolutePath}' not found")
+        }
         def options = ConfigResolveOptions.defaults().setAllowUnresolved(true).appendResolver(BLANK_RESOLVER)
         return parseFileAnySyntax(configFile, ConfigParseOptions.defaults()).resolve(options)
     }

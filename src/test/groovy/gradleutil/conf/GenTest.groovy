@@ -84,7 +84,7 @@ class GenTest extends Specification {
 
     def "ecore schema"() {
         setup:
-        def jsonSchema = new File('conf-template/src/gradleutil/conf/schema/Ecore.schema.json')
+        def jsonSchema = new File('buildSrc/src/gradleutil/conf/schema/Ecore.schema.json')
         def gen = new Gen()
         gen.packageName = packageName
 
