@@ -26,9 +26,9 @@ repositories {
 
 def getScmVersion = {
     def git = Grgit.open(dir: file('.'))
-    def describedCommit = git.describe().toString().trim()
-    def masterRevision = git.resolve.toCommit(git.resolve.toBranch('master')).id
-    def isSnapshot = masterRevision != git.head().id
+    def describedCommit = git.describe()?.toString()?.trim() ?: file('VERSION').text.trim()
+    def masterRevision = git.resolve.toCommit(git.resolve.toBranch('master'))?.id
+    def isSnapshot = masterRevision != git.head()?.id
     return describedCommit.replaceAll("(.*)-[0-9]+-g[0-9a-f]{7}(.*)", '$1$2') + (isSnapshot ? "-SNAPSHOT" : "")
 }
 
