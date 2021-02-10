@@ -1,12 +1,12 @@
-package gradleutil.conf.generator
+package net.gradleutil.conf.generator
 
-import gradleutil.conf.Gen
-import gradleutil.conf.template.EPackage
+import net.gradleutil.conf.Gen
+import net.gradleutil.conf.template.EPackage
 import org.everit.json.schema.*
 import org.json.JSONObject
 
-import static gradleutil.conf.template.EPackage.EClass
-import static gradleutil.conf.template.EPackage.EStructuralFeature
+import static net.gradleutil.conf.template.EPackage.EClass
+import static net.gradleutil.conf.template.EPackage.EStructuralFeature
 
 class EPackageGenerator {
 

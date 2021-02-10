@@ -1,13 +1,12 @@
-package gradleutil.conf
+package net.gradleutil.conf
 
 
-import com.typesafe.config.ConfigRenderOptions
-import gradleutil.conf.generator.ConfigSchema
+import net.gradleutil.conf.generator.ConfigSchema
 import spock.lang.Specification
 
 class ConfigSchemaTest extends Specification {
 
-    def base = 'src/test/groovy/gradleutil/conf/temp/'
+    def base = 'src/test/groovy/net/gradleutil/conf/temp/'
 
     def setup() {
         new File(base).with {

@@ -1,4 +1,4 @@
 .gradle
 build
 .idea
-/src/test/groovy/gradleutil/conf/temp/
+/src/test/groovy/net/gradleutil/conf/temp/

@@ -1,4 +1,4 @@
-package gradleutil.conf.generator
+package net.gradleutil.conf.generator
 
 import com.typesafe.config.ConfigObject
 import org.everit.json.schema.Schema

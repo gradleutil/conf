@@ -1,4 +1,4 @@
-package gradleutil.conf.template
+package net.gradleutil.conf.template
 
 import org.codehaus.groovy.syntax.Types
 

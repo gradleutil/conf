@@ -1,14 +1,11 @@
-package gradleutil.conf.generator
+package net.gradleutil.conf.generator
 
 import com.typesafe.config.*
-import gradleutil.conf.Loader
+import net.gradleutil.conf.Loader
 import org.everit.json.schema.*
-import org.everit.json.schema.loader.SpecificationVersion
 import org.everit.json.schema.regexp.JavaUtilRegexpFactory
 import org.everit.json.schema.regexp.RegexpFactory
 import org.json.JSONObject
-
-import static com.typesafe.config.ConfigFactory.parseFileAnySyntax
 
 class ConfigSchema {
 
