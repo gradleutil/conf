@@ -1,13 +1,11 @@
-package gradleutil.conf
+package net.gradleutil.conf
 
 
-import com.typesafe.config.ConfigRenderOptions
-import gradleutil.conf.generator.ConfigSchema
 import spock.lang.Specification
 
 class GenTest extends Specification {
 
-    def base = 'src/test/groovy/gradleutil/conf/temp/'
+    def base = 'src/test/groovy/net/gradleutil/conf/temp/'
     def packageName = 'gradleutil.conf.temp'
 
     def setup() {
@@ -84,7 +82,7 @@ class GenTest extends Specification {
 
     def "ecore schema"() {
         setup:
-        def jsonSchema = new File('buildSrc/src/gradleutil/conf/schema/Ecore.schema.json')
+        def jsonSchema = new File('buildSrc/src/net/gradleutil/conf/schema/Ecore.schema.json')
         def gen = new Gen()
         gen.packageName = packageName
 
@@ -131,11 +129,11 @@ class GenTest extends Specification {
 /*
     def "test dsl"() {
         setup:
-        def configModelFile = new File('src/test/groovy/gradleutil/generated/JavaClass.groovy')
+        def configModelFile = new File('src/test/groovy/net/gradleutil/generated/JavaClass.groovy')
         def gen = new Gen()
 
         when:
-        def result = gradleutil.generated.DSL.javaClass{
+        def result = net.gradleutil.generated.DSL.javaClass{
             name = 'fart'
         }
 

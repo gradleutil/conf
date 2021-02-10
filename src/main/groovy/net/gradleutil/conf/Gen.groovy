@@ -1,16 +1,16 @@
-package gradleutil.conf
+package net.gradleutil.conf
 
 import com.fizzed.rocker.Rocker
-import gradleutil.conf.generator.EPackageGenerator
-import gradleutil.conf.generator.GroovyConfig
-import gradleutil.conf.generator.JsonConfig
-import gradleutil.conf.template.EPackage
+import net.gradleutil.conf.generator.GroovyConfig
+import net.gradleutil.conf.generator.JsonConfig
+import net.gradleutil.conf.template.EPackage
+import net.gradleutil.conf.generator.EPackageGenerator
 import org.everit.json.schema.Schema
 import org.everit.json.schema.loader.SchemaLoader
 import org.json.JSONArray
 import org.json.JSONObject
 
-import static gradleutil.conf.generator.JsonConfig.jsonObjectFromString
+import static net.gradleutil.conf.generator.JsonConfig.jsonObjectFromString
 
 class Gen {
 

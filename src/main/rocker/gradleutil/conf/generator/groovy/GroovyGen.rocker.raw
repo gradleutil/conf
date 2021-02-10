@@ -1,5 +1,5 @@
 @option discardLogicWhitespace=true
-@import gradleutil.conf.template.EPackage
+@import net.gradleutil.conf.template.EPackage
 @import com.fizzed.rocker.Rocker
 
 @args(EPackage javaClassTemplate)
@@ -12,7 +12,7 @@ import groovy.transform.ToString
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
-import gradleutil.conf.Loader
+import net.gradleutil.conf.Loader
 
 class ConfigConf {
     static final Config conf = ConfigFactory.load( '@(javaClassTemplate.name)' )

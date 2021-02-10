@@ -1,6 +1,6 @@
 @option discardLogicWhitespace=true
 @import com.fizzed.rocker.Rocker
-@import static gradleutil.conf.template.EPackage.EClass
+@import static net.gradleutil.conf.template.EPackage.EClass
 
 @args(EClass javaClassTemplate)
 

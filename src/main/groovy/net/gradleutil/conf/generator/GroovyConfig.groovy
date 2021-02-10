@@ -1,4 +1,4 @@
-package gradleutil.conf.generator
+package net.gradleutil.conf.generator
 
 import com.typesafe.config.ConfigObject
 import org.everit.json.schema.Schema
@@ -27,8 +27,8 @@ class GroovyConfig {
         groovy.append('''
             import com.typesafe.config.Config
 
-            import static gradleutil.conf.generator.JsonConfig.getSchema
-            import static gradleutil.conf.generator.JsonConfig.validate
+            import static net.gradleutil.conf.generator.JsonConfig.getSchema
+            import static net.gradleutil.conf.generator.JsonConfig.validate
             import org.json.JSONObject
 
             class Block {

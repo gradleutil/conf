@@ -1,4 +1,4 @@
-package gradleutil.conf.genned;
+package net.gradleutil.conf.genned;
 
 import com.typesafe.config.Optional
 

@@ -54,7 +54,7 @@ dependencies {
 }
 
 task deleteGeneratedTestData(type: Delete) {
-    def tempDir = file('src/test/groovy/gradleutil/conf/temp')
+    def tempDir = file('src/test/groovy/net/gradleutil/conf/temp')
     outputs.upToDateWhen { !tempDir.exists() }
     delete tempDir
 }
@@ -99,6 +99,11 @@ allprojects {
     }
 }
 
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+
 jar {
     enabled(false)
     archiveClassifier.set('core')
@@ -110,6 +115,16 @@ shadowJar {
     archiveClassifier.set('')
     doLast {
         logger.lifecycle("Shadow jar:" + outputs.files.first())
+    }
+}
+
+publishing {
+    publications {
+        shadow(MavenPublication) { publication ->
+            project.shadow.component(publication)
+            artifact sourcesJar
+            artifact javadocJar
+        }
     }
 }
 
@@ -126,10 +141,24 @@ task artifactList {
     }
 }
 
-publishing {
-    publications {
-        shadow(MavenPublication) { publication ->
-            project.shadow.component(publication)
+
+tasks.withType(AbstractPublishToMaven) { publishTask ->
+    doLast {
+        if (publishTask instanceof PublishToMavenRepository) {
+            logger.lifecycle("Published ${project.group}.${project.name}:${version} to ${publishTask.repository.url}")
+        } else if (publishTask instanceof PublishToMavenLocal) {
+            String repoPath = repositories.mavenLocal().url.toURL().getFile()
+            publication.with { p ->
+                def sb = new StringBuilder()
+                p.artifacts.each {
+                    String artifactPath = p.groupId.replace(".", "/") + "/" + p.artifactId + "/" + p.version
+                    sb.append('\n  ' + repoPath).append(artifactPath)
+                            .append(it.classifier ? '-' + it.classifier : '').append('.' + it.extension)
+                }
+                logger.lifecycle("Published ${p.groupId}:${p.artifactId}:${p.version}${sb.toString()}")
+            }
+        } else {
+            logger.lifecycle("Published ${project.group}:${project.name}:${version}")
         }
     }
 }

@@ -1,4 +1,4 @@
-package gradleutil.conf
+package net.gradleutil.conf
 
 import com.typesafe.config.*
 
