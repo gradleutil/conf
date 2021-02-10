@@ -29,10 +29,35 @@ class LoaderTest extends Specification {
 
         when:
         def config = Loader.loadWithOverride('config.conf', conf, confOverride)
-        ConfUtil.configToJson(config)
 
         then:
         config.getString('two') == 'dos'
+    }
+
+    def "test system props or nots"() {
+        setup:
+        def config
+        def conf = new File(base, 'config.conf').tap { text = 'one=1\ntwo=2\nthree=3\n' }
+        def confOverride = new File(base, 'config.override.conf').tap { text = 'two=dos\nthree=tres\n' }
+
+        when:
+//        def config = Loader.loadWithOverride('config.conf', conf, confOverride)
+        config = Loader.load(conf, Loader.defaultOptions().setUseSystemProperties(true))
+        println ConfUtil.configToJson(config)
+
+        then:
+        config.root().unwrapped().java != null
+
+        when:
+//        def config = Loader.loadWithOverride('config.conf', conf, confOverride)
+        config = Loader.load(conf, Loader.defaultOptions().setUseSystemProperties(false))
+        println ConfUtil.configToJson(config)
+
+        then:
+        config.root().unwrapped().java == null
+
+
+
     }
 
 /*
