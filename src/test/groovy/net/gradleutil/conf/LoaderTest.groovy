@@ -28,7 +28,7 @@ class LoaderTest extends Specification {
         def confOverride = new File(base, 'config.override.conf').tap { text = 'two=dos\nthree=tres\n' }
 
         when:
-        def config = Loader.loadWithOverride('config.conf', conf, confOverride)
+        def config = Loader.loadWithOverride(conf, confOverride)
 
         then:
         config.getString('two') == 'dos'

@@ -3,6 +3,7 @@ package net.gradleutil.conf
 import com.typesafe.config.*
 import groovy.transform.builder.Builder
 import groovy.transform.builder.SimpleStrategy
+import org.everit.json.schema.Schema
 import org.json.JSONObject
 
 import static com.typesafe.config.ConfigFactory.parseFile
@@ -19,50 +20,61 @@ class Loader {
         Boolean useSystemProperties = false
         Boolean allowUnresolved = false
         Boolean invalidateCaches = false
+        String baseName = 'config.conf'
+        File conf = null
+        File confOverride = null
+        File schemaFile = null
+        String schemaName = 'schema.json'
     }
 
-    static Config load(Config config, LoaderOptions options = defaultOptions()) {
-        def resolver = ConfigResolveOptions.defaults().setAllowUnresolved(options.allowUnresolved).setUseSystemEnvironment(options.useSystemEnvironment)
+    static void validate(options = defaultOptions()) {
+        if(options.schemaFile){
+            Gen.getSchema(options.schemaFile.text)
+        }
+    }
+
+    static Config load(LoaderOptions options = defaultOptions()) {
         List<Config> fallbacks = []
+        Config config, confOverride
+
         if (options.invalidateCaches) {
             invalidateCaches()
         }
         if (options.useSystemProperties) {
             fallbacks.add ConfigFactory.systemProperties()
         }
+
+        if (options.conf?.exists()) {
+            config = parseFile(options.conf)
+        } else {
+            config = parseResourcesAnySyntax(Loader.classLoader, options.baseName)
+        }
+
+        if (options.confOverride?.exists()) {
+            confOverride = parseFile(options.confOverride)
+            config = confOverride.withFallback(config)
+        }
+
         fallbacks.each { config = config.withFallback(it) }
+
+        def resolver = ConfigResolveOptions.defaults().setAllowUnresolved(options.allowUnresolved).setUseSystemEnvironment(options.useSystemEnvironment)
         config.resolve(resolver)
     }
 
     static Config load(File conf, LoaderOptions options = defaultOptions()) {
-        load(parseFileAnySyntax(conf), options)
+        load(options.setConf(conf))
     }
 
     static LoaderOptions defaultOptions() {
         return new LoaderOptions()
     }
 
-    static Config load(File schemaFile, File conf, LoaderOptions options = defaultOptions()) {
-        def schema = Gen.getSchema(schemaFile.text)
-        return load(conf, options)
+    static Config loadWithSchema(File schemaFile, File conf, LoaderOptions options = defaultOptions()) {
+        return load(options.setConf(conf).setSchemaFile(schemaFile))
     }
 
-    static Config loadWithOverride(String baseName, File conf, File confOverride, LoaderOptions options = defaultOptions()) {
-        ConfigFactory.invalidateCaches()
-        Config defaultConfig, userConfig, returnConfig
-        def parseOptions = ConfigParseOptions.defaults()
-        if (conf.exists()) {
-            defaultConfig = parseFile(conf, parseOptions)
-        } else {
-            defaultConfig = parseResourcesAnySyntax(Loader.classLoader, baseName, parseOptions)
-        }
-        if (confOverride.exists()) {
-            userConfig = parseFile(confOverride, parseOptions).withFallback(defaultConfig)
-            returnConfig = load(userConfig, options).withFallback(defaultConfig)
-        } else {
-            returnConfig = load(defaultConfig, options)
-        }
-        returnConfig
+    static Config loadWithOverride(File conf, File confOverride, LoaderOptions options = defaultOptions()) {
+        load(options.setConf(conf).setConfOverride(confOverride))
     }
 
 
