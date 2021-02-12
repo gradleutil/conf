@@ -20,7 +20,7 @@ class ConfigSchemaTest extends Specification {
     def "config to schema"() {
         setup:
         def configFile = new File('src/test/resources/json/family.json')
-        def config = Loader.parse(configFile)
+        def config = Loader.resolveWithSystem(configFile)
         assert config
 
         when:

@@ -3,10 +3,8 @@ package net.gradleutil.conf
 import com.typesafe.config.*
 import groovy.transform.builder.Builder
 import groovy.transform.builder.SimpleStrategy
-import org.everit.json.schema.Schema
 import org.json.JSONObject
 
-import static com.typesafe.config.ConfigFactory.parseFile
 import static com.typesafe.config.ConfigFactory.parseFileAnySyntax
 import static com.typesafe.config.ConfigFactory.parseResourcesAnySyntax
 import static com.typesafe.config.ConfigFactory.parseString
@@ -20,11 +18,14 @@ class Loader {
         Boolean useSystemProperties = false
         Boolean allowUnresolved = false
         Boolean invalidateCaches = false
+        Boolean silent = true
         String baseName = 'config.conf'
         File conf = null
+        File reference = null
         File confOverride = null
         File schemaFile = null
         String schemaName = 'schema.json'
+        ClassLoader classLoader = Loader.classLoader
     }
 
     static void validate(options = defaultOptions()) {
@@ -33,40 +34,68 @@ class Loader {
         }
     }
 
-    static Config load(LoaderOptions options = defaultOptions()) {
-        List<Config> fallbacks = []
-        Config config, confOverride
-
-        if (options.invalidateCaches) {
-            invalidateCaches()
-        }
-        if (options.useSystemProperties) {
-            fallbacks.add ConfigFactory.systemProperties()
-        }
-
-        if (options.conf?.exists()) {
-            config = parseFile(options.conf)
-        } else {
-            config = parseResourcesAnySyntax(Loader.classLoader, options.baseName)
-        }
-
-        if (options.confOverride?.exists()) {
-            confOverride = parseFile(options.confOverride)
-            config = confOverride.withFallback(config)
-        }
-
-        fallbacks.each { config = config.withFallback(it) }
-
-        def resolver = ConfigResolveOptions.defaults().setAllowUnresolved(options.allowUnresolved).setUseSystemEnvironment(options.useSystemEnvironment)
-        config.resolve(resolver)
-    }
-
     static Config load(File conf, LoaderOptions options = defaultOptions()) {
         load(options.setConf(conf))
     }
 
     static LoaderOptions defaultOptions() {
         return new LoaderOptions()
+    }
+
+    static Config load(LoaderOptions options = defaultOptions()) {
+        List<Config> fallbacks = []
+        Config config, confOverride
+        def log = new Log(options)
+
+        def ifExists = { String message, File file ->
+            if(file?.exists()){
+                log.info(message + ': ' + file.absolutePath)
+                return true
+            }
+            if (file && !file.exists()) {
+                log.info("${message}: ${file.absolutePath} does not exist")
+                return false
+            }
+            return false
+        }
+
+        if (options.invalidateCaches) {
+            invalidateCaches()
+            log.info('Invalidating caches')
+        }
+
+        def resolver = ConfigResolveOptions.defaults().setAllowUnresolved(options.allowUnresolved).setUseSystemEnvironment(options.useSystemEnvironment).appendResolver(SYSTEM_PROPERTY)
+
+        if(ifExists('load reference', options.reference)){
+            fallbacks.add ConfigFactory.parseFile(options.reference)
+        } else {
+            if (!options.useSystemProperties) {
+                log.info("Loading reference from classloader, classLoader=${options.classLoader}")
+                fallbacks.add ConfigFactory.defaultReferenceUnresolved()
+            }
+        }
+
+        if (ifExists('load config', options.conf)) {
+            config = ConfigFactory.parseFile(options.conf)
+        } else {
+            log.info("Loading config from classloader, baseName=${options.baseName}, classLoader=${options.classLoader}")
+            config = parseResourcesAnySyntax(options.classLoader, options.baseName)
+        }
+
+        if (ifExists('load override', options.confOverride)) {
+            config = ConfigFactory.parseFile(options.confOverride).withFallback(config)
+        }
+
+        fallbacks.each { config = config.withFallback(it) }
+
+        log.info('Resolving config, existing keys:' + config.root().keySet().join(', '))
+        if (options.useSystemProperties) {
+            log.info('Using System Properties')
+            return ConfigFactory.load(config)
+        } else {
+            return config.resolve(resolver)
+        }
+
     }
 
     static Config loadWithSchema(File schemaFile, File conf, LoaderOptions options = defaultOptions()) {
@@ -78,11 +107,16 @@ class Loader {
     }
 
 
-    static Config parse(File configFile) {
+    static Config resolveWithSystem(String baseName) {
+        def options = ConfigResolveOptions.defaults().setAllowUnresolved(true).appendResolver(SYSTEM_PROPERTY)
+        return parseResourcesAnySyntax(baseName, ConfigParseOptions.defaults()).resolve(options)
+    }
+
+    static Config resolveWithSystem(File configFile) {
         if (!configFile.exists()) {
             throw new FileNotFoundException("config file '${configFile.absolutePath}' not found")
         }
-        def options = ConfigResolveOptions.defaults().setAllowUnresolved(true).appendResolver(BLANK_RESOLVER)
+        def options = ConfigResolveOptions.defaults().setAllowUnresolved(true).appendResolver(SYSTEM_PROPERTY)
         return parseFileAnySyntax(configFile, ConfigParseOptions.defaults()).resolve(options)
     }
 
@@ -110,11 +144,11 @@ class Loader {
         ConfigFactory.invalidateCaches()
     }
 
-    private static final ConfigResolver BLANK_RESOLVER = new ConfigResolver() {
+    private static final ConfigResolver SYSTEM_PROPERTY = new ConfigResolver() {
 
         @Override
         ConfigValue lookup(String path) {
-            return ConfigValueFactory.fromMap([(path): path]).get(path)
+            return ConfigValueFactory.fromMap([(path): System.properties.get(path) ?: path]).get(path)
         }
 
         @Override
@@ -122,6 +156,19 @@ class Loader {
             return fallback
         }
 
+    }
+
+    static class Log {
+        LoaderOptions options
+        Log(LoaderOptions options){
+            this.options = options
+        }
+
+        def info(String string){
+            if(!options.silent){
+                println('conf-info: ' + string)
+            }
+        }
     }
 
 

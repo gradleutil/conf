@@ -24,39 +24,110 @@ class LoaderTest extends Specification {
 
     def "test override"() {
         setup:
-        def conf = new File(base, 'config.conf').tap { text = 'one=1\ntwo=2\nthree=3\n' }
-        def confOverride = new File(base, 'config.override.conf').tap { text = 'two=dos\nthree=tres\n' }
+        def conf = new File(base, 'config.conf').tap { text = """
+        {
+            "car": {
+                "engine": {
+                    "type": "big",
+                    "brand": "sterling"
+                },
+                "doors": {
+                    "number": 4
+                }
+            }
+        }
+        """ }
+        def confOverride = new File(base, 'config.override.conf').tap { text = """
+        {
+            "car": {
+                "engine": {
+                    "type": "small",
+                }
+            }
+        }
+        """ }
 
         when:
         def config = Loader.loadWithOverride(conf, confOverride)
 
         then:
-        config.getString('two') == 'dos'
+        config.root().unwrapped().car.engine.type == 'small'
+        config.root().unwrapped().car.doors.number == 4
     }
 
     def "test system props or nots"() {
         setup:
         def config
         def conf = new File(base, 'config.conf').tap { text = 'one=1\ntwo=2\nthree=3\n' }
-        def confOverride = new File(base, 'config.override.conf').tap { text = 'two=dos\nthree=tres\n' }
 
         when:
-//        def config = Loader.loadWithOverride('config.conf', conf, confOverride)
+        config = Loader.load(conf, Loader.defaultOptions().setUseSystemProperties(false).setSilent(false))
+
+        then:
+        config.root().unwrapped().java == null
+
+        when:
         config = Loader.load(conf, Loader.defaultOptions().setUseSystemProperties(true))
         println ConfUtil.configToJson(config)
 
         then:
         config.root().unwrapped().java != null
 
+    }
+
+    def "test reference"() {
+        setup:
+        def config
+        def ref = new File(base, 'reference.conf').tap { text = """
+        {
+            "car": {
+                "engine": {
+                    "type": "big",
+                    "brand": "sterling",
+                    "dir": \${user.dir}
+                },
+                "doors": {
+                    "number": 4
+                }
+            }
+        }
+        """ }
+        def conf = new File(base, 'config.conf').tap { text = """
+        {
+            "car": {
+                "engine": {
+                    "type": "small"
+                }
+            }
+        }
+        """ }
+        def confOverride = new File(base, 'config.override.conf').tap { text = """
+        {
+            "car": {
+                "engine": {
+                    "brand": "wellbuilt"
+                }
+            }
+        }
+        """ }
+
         when:
-//        def config = Loader.loadWithOverride('config.conf', conf, confOverride)
-        config = Loader.load(conf, Loader.defaultOptions().setUseSystemProperties(false))
+        System.setProperty('car.doors.number','2')
+        Loader.invalidateCaches()
+        config = Loader.load(conf, Loader.defaultOptions().setUseSystemProperties(true).setReference(ref).setConfOverride(confOverride).setSilent(false))
         println ConfUtil.configToJson(config)
 
+
         then:
-        config.root().unwrapped().java == null
+        config.root().unwrapped().car.engine.dir != 'user.dir'
+        config.root().unwrapped().car.engine.brand == 'wellbuilt'
+        config.root().unwrapped().car.engine.type == 'small'
+        System.getProperty('car.doors.number') == '2'
+        config.root().unwrapped().car.doors.number == '2'
 
-
+        then:
+        config.root().unwrapped().java != null
+        System.clearProperty('car.doors.number')
 
     }
 

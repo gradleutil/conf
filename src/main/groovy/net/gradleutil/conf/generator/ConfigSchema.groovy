@@ -155,7 +155,7 @@ class ConfigSchema {
     }
 
     static void configFileToSchemaFile(File configFile, File schemaFile) {
-        def config = Loader.parse(configFile).root()
+        def config = Loader.resolveWithSystem(configFile).root()
         schemaFile.text = new JSONObject(getSchema(config).toString()).toString(1)
     }
 
