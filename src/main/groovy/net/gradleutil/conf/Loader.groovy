@@ -3,39 +3,37 @@ package net.gradleutil.conf
 import com.typesafe.config.*
 import groovy.transform.builder.Builder
 import groovy.transform.builder.SimpleStrategy
+import net.gradleutil.conf.util.ConfUtil
 import org.json.JSONObject
 
-import static com.typesafe.config.ConfigFactory.parseFileAnySyntax
-import static com.typesafe.config.ConfigFactory.parseResourcesAnySyntax
-import static com.typesafe.config.ConfigFactory.parseString
+import static com.typesafe.config.ConfigFactory.load as factoryLoad
+import static com.typesafe.config.ConfigFactory.parseFile as factoryParseFile
+import static com.typesafe.config.ConfigFactory.parseResources as factoryParseResources
+import static com.typesafe.config.ConfigFactory.parseString as factoryParseString
 
 class Loader {
 
 
-    @Builder(builderStrategy = SimpleStrategy)
+    @Builder(builderStrategy = SimpleStrategy, prefix = '')
     static class LoaderOptions {
         Boolean useSystemEnvironment = false
         Boolean useSystemProperties = false
+        Boolean useReferences = false
         Boolean allowUnresolved = false
         Boolean invalidateCaches = false
+        Boolean singularizeClasses = true
         Boolean silent = true
-        String baseName = 'config.conf'
+        String baseName = 'config'
+        String confString = null
         File conf = null
         File reference = null
         File confOverride = null
         File schemaFile = null
         String schemaName = 'schema.json'
+        String className = 'Config'
+        String packageName = 'conf.configuration'
+        Config config
         ClassLoader classLoader = Loader.classLoader
-    }
-
-    static void validate(options = defaultOptions()) {
-        if(options.schemaFile){
-            Gen.getSchema(options.schemaFile.text)
-        }
-    }
-
-    static Config load(File conf, LoaderOptions options = defaultOptions()) {
-        load(options.setConf(conf))
     }
 
     static LoaderOptions defaultOptions() {
@@ -44,11 +42,10 @@ class Loader {
 
     static Config load(LoaderOptions options = defaultOptions()) {
         List<Config> fallbacks = []
-        Config config, confOverride
         def log = new Log(options)
 
-        def ifExists = { String message, File file ->
-            if(file?.exists()){
+        def logIfFileExists = { String message, File file ->
+            if (file?.exists()) {
                 log.info(message + ': ' + file.absolutePath)
                 return true
             }
@@ -64,26 +61,31 @@ class Loader {
             log.info('Invalidating caches')
         }
 
-        def resolver = ConfigResolveOptions.defaults().setAllowUnresolved(options.allowUnresolved).setUseSystemEnvironment(options.useSystemEnvironment).appendResolver(SYSTEM_PROPERTY)
 
-        if(ifExists('load reference', options.reference)){
-            fallbacks.add ConfigFactory.parseFile(options.reference)
+        if (logIfFileExists('load reference', options.reference)) {
+            fallbacks.add factoryParseFile(options.reference)
         } else {
-            if (!options.useSystemProperties) {
+            if (options.useReferences) {
                 log.info("Loading reference from classloader, classLoader=${options.classLoader}")
                 fallbacks.add ConfigFactory.defaultReferenceUnresolved()
             }
         }
 
-        if (ifExists('load config', options.conf)) {
-            config = ConfigFactory.parseFile(options.conf)
+        def config
+        if (options.config) {
+            config = options.config
+        } else if (logIfFileExists('load config', options.conf)) {
+            config = factoryParseFile(options.conf)
+        } else if (options.confString) {
+            log.info("Loading config from string")
+            config = ConfigFactory.parseString(options.confString)
         } else {
             log.info("Loading config from classloader, baseName=${options.baseName}, classLoader=${options.classLoader}")
-            config = parseResourcesAnySyntax(options.classLoader, options.baseName)
+            config = factoryParseResources(options.classLoader, options.baseName)
         }
 
-        if (ifExists('load override', options.confOverride)) {
-            config = ConfigFactory.parseFile(options.confOverride).withFallback(config)
+        if (logIfFileExists('load override', options.confOverride)) {
+            config = factoryParseFile(options.confOverride).withFallback(config)
         }
 
         fallbacks.each { config = config.withFallback(it) }
@@ -91,25 +93,45 @@ class Loader {
         log.info('Resolving config, existing keys:' + config.root().keySet().join(', '))
         if (options.useSystemProperties) {
             log.info('Using System Properties')
-            return ConfigFactory.load(config)
+            return factoryLoad(config)
         } else {
+            def resolver = ConfigResolveOptions.defaults().setAllowUnresolved(options.allowUnresolved).
+                    setUseSystemEnvironment(options.useSystemEnvironment).appendResolver(SYSTEM_PROPERTY)
             return config.resolve(resolver)
         }
 
     }
 
+    static Config load(String config, LoaderOptions options = defaultOptions()) {
+        load(options.confString(config))
+    }
+
+    static Config load(Config config, LoaderOptions options = defaultOptions()) {
+        load(options.config(config))
+    }
+
+    static Config load(File conf, LoaderOptions options = defaultOptions()) {
+        load(options.conf(conf))
+    }
+
+    static <T> T load(Class<T> clazz, LoaderOptions options = defaultOptions()) {
+        def config = factoryLoad(options.classLoader, options.baseName)
+        return create(config, clazz, options)
+    }
+
+
     static Config loadWithSchema(File schemaFile, File conf, LoaderOptions options = defaultOptions()) {
-        return load(options.setConf(conf).setSchemaFile(schemaFile))
+        return load(options.conf(conf).setSchemaFile(schemaFile))
     }
 
     static Config loadWithOverride(File conf, File confOverride, LoaderOptions options = defaultOptions()) {
-        load(options.setConf(conf).setConfOverride(confOverride))
+        load(options.conf(conf).confOverride(confOverride))
     }
 
 
     static Config resolveWithSystem(String baseName) {
         def options = ConfigResolveOptions.defaults().setAllowUnresolved(true).appendResolver(SYSTEM_PROPERTY)
-        return parseResourcesAnySyntax(baseName, ConfigParseOptions.defaults()).resolve(options)
+        return factoryParseResources(baseName, ConfigParseOptions.defaults()).resolve(options)
     }
 
     static Config resolveWithSystem(File configFile) {
@@ -117,26 +139,59 @@ class Loader {
             throw new FileNotFoundException("config file '${configFile.absolutePath}' not found")
         }
         def options = ConfigResolveOptions.defaults().setAllowUnresolved(true).appendResolver(SYSTEM_PROPERTY)
-        return parseFileAnySyntax(configFile, ConfigParseOptions.defaults()).resolve(options)
+        def parseOpts = ConfigParseOptions.defaults()
+        if(configFile.name.toLowerCase().endsWith('.mhf')){
+            parseOpts.setSyntax(ConfigSyntax.CONF)
+        }
+        return ConfigFactory.parseFile(configFile, parseOpts).resolve(options)
     }
 
-    static <T> T create(String json, Class<T> clazz) {
-        def config = ConfigFactory.load(parseString(json))
-        return create(config, clazz)
+    static Config resolveStringWithSystem(String conf) {
+        def options = ConfigResolveOptions.defaults().setAllowUnresolved(true).appendResolver(SYSTEM_PROPERTY)
+        def parseOpts = ConfigParseOptions.defaults()
+        parseOpts.setSyntax(ConfigSyntax.CONF)
+        return ConfigFactory.parseString(conf, parseOpts).resolve(options)
     }
 
-    static <T> T create(URL json, Class<T> clazz) {
-        def config = ConfigFactory.load(parseString(json.getFile()))
-        return create(config, clazz)
+    static <T> T create(String json, Class<T> clazz, LoaderOptions options = null) {
+        def config = load(factoryParseString(json), options)
+        return create(config, clazz, options?: defaultOptions())
     }
 
-    static <T> T create(Config config, Class<T> clazz) {
-        return BeanLoader.create(config, clazz)
+    static <T> T create(URL json, Class<T> clazz, LoaderOptions options = null) {
+        def config = factoryLoad(factoryParseString(json.getFile()))
+        return create(config, clazz, options ?: defaultOptions())
+    }
+
+    static <T> T create(Config config, Class<T> clazz, LoaderOptions options = null) {
+        try {
+            return BeanLoader.create(config, clazz, options?: defaultOptions())
+        } catch (ConfigException.Missing e) {
+            if (!options.silent) {
+                def message = ConfUtil.configToJson(config)
+                throw new Exception(e.message + ' from:\n' + message, e)
+            } else {
+                throw e
+            }
+        }
+    }
+
+    static <T> T get(Config config, LoaderOptions options) {
+        try {
+            return BeanConfigLoader.get(config, options.packageName + '.' + options.className, options.classLoader, options.allowUnresolved)
+        } catch (ConfigException.Missing e) {
+            if (!options.silent) {
+                def message = ConfUtil.configToJson(config)
+                throw new Exception(e.message + ' from:\n' + message, e)
+            } else {
+                throw e
+            }
+        }
     }
 
     static <T> T create(Map map, Class<T> clazz) {
         def json = new JSONObject(map).toString()
-        def config = ConfigFactory.load(parseString(json))
+        def config = factoryLoad(factoryParseString(json))
         return BeanLoader.create(config, clazz)
     }
 
@@ -160,12 +215,13 @@ class Loader {
 
     static class Log {
         LoaderOptions options
-        Log(LoaderOptions options){
+
+        Log(LoaderOptions options) {
             this.options = options
         }
 
-        def info(String string){
-            if(!options.silent){
+        def info(String string) {
+            if (!options.silent) {
                 println('conf-info: ' + string)
             }
         }

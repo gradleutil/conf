@@ -1,0 +1,22 @@
+root = true
+
+[*]
+#indent_style = tab
+#indent_size = 4
+#insert_final_newline = true
+trim_trailing_whitespace = false
+charset = utf-8
+
+# md (GitHub shows code fences with 8 spaces)
+[*.adoc]
+indent_style = space
+indent_size = 2
+
+[{*.java, *.groovy}]
+ij_java_imports_layout = java.**, |, javax.**, |, groovy.**, |, lombok.**, |, org.**, |, net.**, |, com.**, |, com.typsafe.**, |, net.gradleutil.**, |, *
+ij_java_use_single_class_imports = true
+ij_java_layout_static_imports_separately = true
+
+[*.groovy]
+ij_groovy_class_count_to_use_import_on_demand = 5
+ij_groovy_names_count_to_use_import_on_demand = 5

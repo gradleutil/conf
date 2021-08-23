@@ -1,6 +1,7 @@
 package net.gradleutil.conf
 
 import com.typesafe.config.*
+import net.gradleutil.conf.util.ConfUtil
 
 import java.beans.BeanInfo
 import java.beans.IntrospectionException
@@ -12,28 +13,16 @@ import java.time.Duration
 class BeanLoader {
 
     /**
-     * @param < T >     type of the bean
-     * @param config config to use
-     * @param clazz class of the bean
-     * @return the bean instance
+     * Create instance of class set with config values
+     * @param config
+     * @param clazz
+     * @param ignoreMissingProperties
+     * @return
      */
-    static <T> T create(Config config, Class<T> clazz) {
-        BeanInfo beanInfo
-        try {
-            beanInfo = Introspector.getBeanInfo(clazz)
-        } catch (IntrospectionException e) {
-            throw new ConfigException.BadBean("Could not get bean information for class " + clazz.getName(), e)
-        }
+    static <T> T create(Config config, Class<T> clazz, Loader.LoaderOptions options = Loader.defaultOptions()) {
 
         try {
-            List<PropertyDescriptor> beanProps = new ArrayList<PropertyDescriptor>()
-            for (PropertyDescriptor beanProp : beanInfo.getPropertyDescriptors()) {
-                if (beanProp.getReadMethod() == null || beanProp.getWriteMethod() == null) {
-                    continue
-                }
-                beanProps.add(beanProp)
-            }
-
+            List<PropertyDescriptor> beanProps = getPropertyDescriptors(getBeanInfo(clazz))
             T bean = clazz.newInstance()
             for (PropertyDescriptor beanProp : beanProps) {
                 Method setter = beanProp.getWriteMethod()
@@ -44,14 +33,15 @@ class BeanLoader {
                     continue
                 }
                 // Is the property key or value missing in the config?
-                Object unwrapped = getValue(clazz, parameterType, parameterClass, config, configPropName)
+                Object unwrapped
+                unwrapped = getValue(clazz, parameterType, parameterClass, config, configPropName, options)
                 if (configPropName == null || unwrapped == null) {
                     // If so, continue if the field is marked as @{link Optional}
-                    if (isOptionalProperty(clazz, beanProp)) {
+                    if (isOptionalProperty(clazz, beanProp) || options.allowUnresolved) {
                         continue
                     }
                     // Otherwise, raise a {@link Missing} exception right here
-                    throw new ConfigException.Missing(beanProp.getName())
+                    throw new ConfigException.Missing(beanProp.getName() + "= ${unwrapped} (${config.root().keySet()})")
                 }
                 setter.invoke(bean, unwrapped)
             }
@@ -64,10 +54,35 @@ class BeanLoader {
             throw new ConfigException.BadBean("Calling bean method on " + clazz.getName() + " caused an exception", e)
         }
     }
+    
+    static BeanInfo getBeanInfo(Class clazz){
+        BeanInfo beanInfo
+        try {
+            beanInfo = Introspector.getBeanInfo(clazz)
+        } catch (IntrospectionException e) {
+            throw new ConfigException.BadBean("Could not get bean information for class " + clazz.getName(), e)
+        }
+        beanInfo
+    }
+
+    static List<PropertyDescriptor> getPropertyDescriptors(BeanInfo beanInfo){
+        List<PropertyDescriptor> beanProps = new ArrayList<PropertyDescriptor>()
+        for (PropertyDescriptor beanProp : beanInfo.getPropertyDescriptors()) {
+            if (beanProp.getReadMethod() == null || beanProp.getWriteMethod() == null) {
+                continue
+            }
+            beanProps.add(beanProp)
+        }
+        beanProps
+    }
 
     private static Object getValue(Class<?> beanClass, Type parameterType, Class<?> parameterClass, Config config,
-                                   String configPropName) {
+                                   String configPropName,Loader.LoaderOptions options) {
         if (!config.hasPath(configPropName)) {
+            def identPropName = ConfUtil.ident(configPropName, true, false)
+            if(config.hasPath(configPropName)){
+                return getValue(beanClass, parameterType, parameterClass, config, identPropName, options)
+            }
             return null
         }
 //        System.out.println("getting value:" + configPropName + "(" + parameterClass.getSimpleName() + ")");
@@ -89,9 +104,9 @@ class BeanLoader {
         } else if (parameterClass == Object.class) {
             return config.getAnyRef(configPropName)
         } else if (parameterClass == List.class) {
-            return getListValue(beanClass, parameterType, parameterClass, config, configPropName)
+            return getListValue(beanClass, parameterType, parameterClass, config, configPropName, options)
         } else if (parameterClass == Set.class) {
-            return getSetValue(beanClass, parameterType, parameterClass, config, configPropName)
+            return getSetValue(beanClass, parameterType, parameterClass, config, configPropName, options)
         } else if (parameterClass == Map.class) {
             // we could do better here, but right now we don't.
             Type[] typeArgs = ((ParameterizedType) parameterType).getActualTypeArguments()
@@ -112,17 +127,17 @@ class BeanLoader {
             Enum enumValue = config.getEnum((Class<Enum>) parameterClass, configPropName)
             return enumValue
         } else if (hasAtLeastOneBeanProperty(parameterClass)) {
-            return create(config.getConfig(configPropName), parameterClass as Class<Object>)
+            return create(config.getConfig(configPropName), parameterClass as Class<Object>, options)
         } else {
             throw new ConfigException.BadBean("Bean property " + configPropName + " of class " + beanClass.getName() + " has unsupported type " + parameterType)
         }
     }
 
-    private static Object getSetValue(Class<?> beanClass, Type parameterType, Class<?> parameterClass, Config config, String configPropName) {
-        return new HashSet((List) getListValue(beanClass, parameterType, parameterClass, config, configPropName))
+    private static Object getSetValue(Class<?> beanClass, Type parameterType, Class<?> parameterClass, Config config, String configPropName,Loader.LoaderOptions options) {
+        return new HashSet((List) getListValue(beanClass, parameterType, parameterClass, config, configPropName, options))
     }
 
-    private static Object getListValue(Class<?> beanClass, Type parameterType, Class<?> parameterClass, Config config, String configPropName) {
+    private static Object getListValue(Class<?> beanClass, Type parameterType, Class<?> parameterClass, Config config, String configPropName, Loader.LoaderOptions options) {
         Type elementType = ((ParameterizedType) parameterType).getActualTypeArguments()[0]
 
         if (elementType == Boolean.class) {
@@ -156,7 +171,17 @@ class BeanLoader {
             if (config.hasPath(configPropName)) {
                 List<? extends Config> configList = config.getConfigList(configPropName)
                 for (Config listMember : configList) {
-                    beanList.add(create(listMember, (Class<?>) elementType))
+                    try{
+                        if(listMember.root().keySet().size() == 1 && listMember.root().keySet().first() == configPropName){
+                            beanList.add(create(listMember.getConfig(configPropName), elementType.class as Class<Object>, options))
+                        } else {
+                            beanList.add(create(listMember, elementType as Class<Object>, options))
+                        }
+                    } catch (ConfigException.Missing e){
+                        println e.message
+                        def conf = listMember.getConfig(listMember.root().keySet().first())
+                        beanList.add(create(conf, elementType as Class<Object>, options))
+                    }
                 }
             }
             return beanList
@@ -200,7 +225,7 @@ class BeanLoader {
         BeanInfo beanInfo
         try {
             beanInfo = Introspector.getBeanInfo(clazz)
-        } catch (IntrospectionException e) {
+        } catch (IntrospectionException ignored) {
             return false
         }
 
