@@ -10,8 +10,8 @@ plugins {
 
 repositories {
     maven { url "https://jitpack.io" }
-    maven { url "https://oss.sonatype.org/service/local/repositories/snapshots/content/" }
-    maven { url "https://repository.jboss.org/nexus/content/repositories/releases/" }
+//    maven { url "https://oss.sonatype.org/service/local/repositories/snapshots/content/" }
+//    maven { url "https://repository.jboss.org/nexus/content/repositories/releases/" }
     mavenCentral()
 }
 
@@ -80,7 +80,6 @@ shadowJar {
     archiveClassifier.set('')
     relocate 'org.json', 'net.gradleutil.conf.json'
     relocate 'org.apache', 'net.gradleutil.conf'
-    relocate 'org.jboss', 'net.gradleutil.conf'
     relocate 'org.everit', 'net.gradleutil.conf'
     relocate 'com', 'net.gradleutil.conf'
     exclude 'META-INF/resources/'
