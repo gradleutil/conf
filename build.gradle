@@ -1,12 +1,5 @@
 import org.ajoberstar.grgit.Grgit
 
-buildscript {
-    repositories {
-        mavenLocal()
-        mavenCentral()
-    }
-}
-
 plugins {
     id 'java-library'
     id 'groovy'
@@ -91,7 +84,12 @@ shadowJar {
     relocate 'org.apache', 'net.gradleutil.conf'
     relocate 'org.jboss', 'net.gradleutil.conf'
     relocate 'org.everit', 'net.gradleutil.conf'
-    relocate 'com.typesafe', 'net.gradleutil.conf'
+    relocate 'com', 'net.gradleutil.conf'
+    exclude 'META-INF/resources/'
+    exclude 'META-INF/versions/'
+    exclude 'META-INF/maven/'
+    exclude 'META-INF/*.txt'
+    exclude 'LICENSE.txt'
     dependencies {
         exclude(dependency('org.codehaus.groovy:.*'))
         exclude(dependency('org.spockframework:.*'))
