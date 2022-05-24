@@ -4,7 +4,7 @@ import spock.lang.Specification
 
 class InflectorTest extends Specification {
 
-    def "test SemVer bumps"() {
+    def "test inflector inflects"() {
         setup:
         def version
         def inflector = Inflector.instance

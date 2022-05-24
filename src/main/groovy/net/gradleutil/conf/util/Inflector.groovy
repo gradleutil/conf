@@ -261,7 +261,7 @@ class Inflector {
             // Replace any extra delimiters with underscores (before the underscores are converted in the next step)...
             if (delimiterChars != null) {
                 for (char delimiterChar : delimiterChars) {
-                    result = result.replace(delimiterChar, '_')
+                    result = result.replace(delimiterChar, '_' as char)
                 }
             }
 
@@ -269,8 +269,7 @@ class Inflector {
             return replaceAllWithUppercase(result, "(^|_)(.)", 2)
         }
         if (lowerCaseAndUnderscoredWord.length() < 2) return lowerCaseAndUnderscoredWord
-        return "" + Character.toLowerCase(lowerCaseAndUnderscoredWord.charAt(0))
-        +camelCase(lowerCaseAndUnderscoredWord, true, delimiterChars).substring(1)
+        return "" + Character.toLowerCase(lowerCaseAndUnderscoredWord.charAt(0)) + camelCase(lowerCaseAndUnderscoredWord, true, delimiterChars).substring(1)
     }
 
     /**
@@ -294,8 +293,8 @@ class Inflector {
      * @param delimiterChars optional characters that are used to delimit word boundaries (beyond capitalization)
      * @return a lower-cased version of the input, with separate words delimited by the underscore character.
      */
-    String underscore(String camelCaseWord,
-                      char ... delimiterChars) {
+    static String underscore(String camelCaseWord,
+                             char ... delimiterChars) {
         if (camelCaseWord == null) return null
         String result = camelCaseWord.trim()
         if (result.length() == 0) return ""
@@ -304,7 +303,7 @@ class Inflector {
         result = result.replace('-', '_')
         if (delimiterChars != null) {
             for (char delimiterChar : delimiterChars) {
-                result = result.replace(delimiterChar, '_')
+                result = result.replace(delimiterChar, '_' as char)
             }
         }
         return result.toLowerCase()
@@ -316,7 +315,7 @@ class Inflector {
      * @param words the word to be capitalized
      * @return the string with the first character capitalized and the remaining characters lowercased
      */
-    String capitalize(String words) {
+    static String capitalize(String words) {
         if (words == null) return null
         String result = words.trim()
         if (result.length() == 0) return ""
@@ -342,8 +341,8 @@ class Inflector {
      * @return the humanized string
      * @see #titleCase(String, String [ ])
      */
-    String humanize(String lowerCaseAndUnderscoredWords,
-                    String... removableTokens) {
+    static String humanize(String lowerCaseAndUnderscoredWords,
+                           String... removableTokens) {
         if (lowerCaseAndUnderscoredWords == null) return null
         String result = lowerCaseAndUnderscoredWords.trim()
         if (result.length() == 0) return ""
@@ -377,8 +376,8 @@ class Inflector {
      * @param removableTokens optional array of tokens that are to be removed
      * @return the title-case version of the supplied words
      */
-    String titleCase(String words,
-                     String... removableTokens) {
+    static String titleCase(String words,
+                            String... removableTokens) {
         String result = humanize(words, removableTokens)
         result = replaceAllWithUppercase(result, "\\b([a-z])", 1) // change first char of each word to uppercase
         return result
@@ -391,7 +390,7 @@ class Inflector {
      * @param number the non-negative number
      * @return the string with the number and ordinal suffix
      */
-    String ordinalize(int number) {
+    static String ordinalize(int number) {
         int remainder
         String numberStr = Integer.toString(number)
         if (11 <= number && number <= 13) return numberStr + "th"
