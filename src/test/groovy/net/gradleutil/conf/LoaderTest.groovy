@@ -1,9 +1,5 @@
 package net.gradleutil.conf
 
-
-import net.gradleutil.conf.util.ConfUtil
-import org.jboss.dna.common.text.Inflector
-
 class LoaderTest extends AbstractTest {
 
     def "test override"() {

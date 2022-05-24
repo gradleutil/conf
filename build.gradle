@@ -13,7 +13,6 @@ repositories {
     maven { url "https://oss.sonatype.org/service/local/repositories/snapshots/content/" }
     maven { url "https://repository.jboss.org/nexus/content/repositories/releases/" }
     mavenCentral()
-    mavenLocal()
 }
 
 def versionFile = file('VERSION')
@@ -41,8 +40,7 @@ dependencies {
     implementation 'com.typesafe:config:1.4.2'
     implementation 'org.json:json:20220320'
     implementation 'com.github.everit-org.json-schema:org.everit.json.schema:1.14.1'
-    implementation group: 'org.jboss.dna', name: 'dna-common', version: '0.7'
-//    implementation 'gg.jte:jte:1.10.0'
+//    implementation group: 'org.jboss.dna', name: 'dna-common', version: '0.7'
 //    implementation 'org.eclipse.emfatic:org.eclipse.emfatic.core:0.8.0-SNAPSHOT'
 //    implementation group: 'org.eclipse.emf', name: 'org.eclipse.emf.ecore', version: '2.23.0'
     
