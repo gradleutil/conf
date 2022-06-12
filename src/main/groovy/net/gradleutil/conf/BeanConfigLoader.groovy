@@ -20,21 +20,23 @@ class BeanConfigLoader {
 
     static <T> T create(Loader.LoaderOptions options) {
         Class clazz = getClassForKey(options.className, options)
-        T bean = clazz.newInstance() as T
+        T bean = clazz.getDeclaredConstructor().newInstance() as T
         setBeanFromConfig(bean, options)
         return bean
     }
 
     static void setBeanFromConfig(Object bean, Loader.LoaderOptions options) {
         List<PropertyDescriptor> beanProps = getPropertyDescriptors(getBeanInfo(bean.class))
-        List<Map<String, ConfigValue>> keyValueMap = options.config.root().collect { [(it.key): it.value] }
+        if (!options.config) {
+            options.config = Loader.load(options)
+        }
         def packageName = bean.class.package.name
+        List<Map<String, ConfigValue>> keyValueMap = toList(bean, options.config)
         options.classLoader(options.classLoader ?: bean.class.classLoader)
         keyValueMap*.each { key, configValue ->
             def id = ident(key, true, true, options.singularizeClasses)
+            def setter = getSetter(beanProps, key, id)
             def value = getValue(configValue, key, packageName + '.' + id, beanProps, options.classLoader, options.allowUnresolved)
-            def identPropName = key.toLowerCase()
-            def setter = beanProps.find { it.getWriteMethod().name.toLowerCase() == 'set' + identPropName }
             if (setter && value != null) {
                 def firstParam = setter.getWriteMethod().parameters.first()
                 try {
@@ -49,6 +51,27 @@ class BeanConfigLoader {
             }
         }
     }
+
+    static List<Map<String, ConfigValue>> toList(Object bean, Config config) {
+        List<Map<String, ConfigValue>> keyValueMap = config.root().collect { [(it.key): it.value] }
+        if (keyValueMap*.keySet().size() == 1) {
+            def k = keyValueMap.first().keySet().first()
+            if (k.equalsIgnoreCase bean.class.simpleName) {
+                def key = config.root().get(k) as Map
+                return key.collect { [(it.key): it.value] } as List<Map<String, ConfigValue>>
+            }
+        }
+        return keyValueMap
+    }
+
+    static PropertyDescriptor getSetter(List<PropertyDescriptor> beanProps, String key, String id) {
+        def setter = beanProps.find { it.getWriteMethod().name.toLowerCase() == 'set' + key.toLowerCase() }
+        if (setter != null) {
+            return setter
+        }
+        return beanProps.find { it.getWriteMethod().name.toLowerCase() == 'set' + id.toLowerCase() }
+    }
+
     static Class getClassForKey(String name, Loader.LoaderOptions options) {
         def obClass
         def packageName = name.take(name.lastIndexOf('.'))

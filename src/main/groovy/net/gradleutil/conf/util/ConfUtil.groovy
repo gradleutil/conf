@@ -78,6 +78,35 @@ class ConfUtil {
     }
 
 
+    /**
+     * sets bean from conf, NOT ignoring missing properties and NOT using system props
+     * @param bean
+     * @param confString
+     * @param ignoreMissingProperties
+     * @param useSystemProps
+     * @param silent
+     */
+    static void setBeanFromConf(Object bean, String confString, Boolean ignoreMissingProperties = false, Boolean useSystemProps = false, Boolean silent = true) {
+        if (!confString) {
+            throw new IllegalArgumentException("conf is required")
+        }
+        def options = Loader.defaultOptions()
+                .allowUnresolved(ignoreMissingProperties)
+                .silent(silent)
+                .confString(confString)
+                .useSystemProperties(useSystemProps)
+        options.config = Loader.load(options)
+        BeanConfigLoader.setBeanFromConfig(bean, options)
+    }
+
+
+    /**
+     * sets bean from conf file, ignoring missing properties and using system props
+     * @param bean
+     * @param conf
+     * @param confOverride
+     * @param ignoreMissingProperties
+     */
     static void setBeanFromConfigFile(Object bean, File conf, File confOverride, Boolean ignoreMissingProperties = true) {
         if (!conf.exists()) {
             throw new IllegalArgumentException("conf ${conf.absolutePath} does not exist")
