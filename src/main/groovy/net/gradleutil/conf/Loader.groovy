@@ -1,9 +1,16 @@
 package net.gradleutil.conf
 
 import com.typesafe.config.*
+import groovy.transform.AnnotationCollector
+import groovy.transform.EqualsAndHashCode
+import groovy.transform.ToString
 import groovy.transform.builder.Builder
 import groovy.transform.builder.SimpleStrategy
+import net.gradleutil.conf.annotation.ToStringIncludeNames
+import net.gradleutil.conf.json.schema.SchemaUtil
 import net.gradleutil.conf.util.ConfUtil
+import org.everit.json.schema.Schema
+import org.everit.json.schema.ValidationException
 import org.json.JSONObject
 
 import static com.typesafe.config.ConfigFactory.load as factoryLoad
@@ -11,10 +18,14 @@ import static com.typesafe.config.ConfigFactory.parseFile as factoryParseFile
 import static com.typesafe.config.ConfigFactory.parseResources as factoryParseResources
 import static com.typesafe.config.ConfigFactory.parseString as factoryParseString
 
+import java.lang.annotation.Retention
+import java.lang.annotation.RetentionPolicy
+
 class Loader {
 
 
     @Builder(builderStrategy = SimpleStrategy, prefix = '')
+    @ToStringIncludeNames
     static class LoaderOptions {
         Boolean useSystemEnvironment = false
         Boolean useSystemProperties = false
@@ -29,10 +40,15 @@ class Loader {
         File reference = null
         File confOverride = null
         File schemaFile = null
+        Schema schema = null
+        String schemaString = null
+        Boolean schemaValidation = true
+        Closure<List<ValidationException>> onSchemaValidationFailure = null
         String schemaName = 'schema.json'
         String className = 'Config'
         String packageName = 'conf.configuration'
         Config config
+        Log logger = new Log(this)
         ClassLoader classLoader = Loader.classLoader
     }
 
@@ -88,17 +104,46 @@ class Loader {
             config = factoryParseFile(options.confOverride).withFallback(config)
         }
 
+        if (options.schemaString) {
+            log.info("Loading schema from string")
+            options.schema = SchemaUtil.getSchema(options.schemaString)
+        } else if (options.schemaFile) {
+            log.info("Loading schema from ${options.schemaFile}")
+            options.schema = SchemaUtil.getSchema(options.schemaFile)
+        }
+
         fallbacks.each { config = config.withFallback(it) }
 
         log.info('Resolving config, existing keys:' + config.root().keySet().join(', '))
+
+        if (options.schema && options.schemaValidation) {
+            log.info('Validating config against schema')
+            def errors = SchemaUtil.validate(options.schema, ConfUtil.configToJsonObject(config))
+            if (errors) {
+                if(options.onSchemaValidationFailure != null){
+                    options.onSchemaValidationFailure.call(errors)
+                } else {
+                    errors.each {
+                        System.err.println(it)
+                    }
+                    throw new IllegalArgumentException("Failed validation")
+                }
+            }
+            log.info('Finished validating')
+        }
+
+
+        Config conf
         if (options.useSystemProperties) {
             log.info('Using System Properties')
-            return factoryLoad(config)
+            conf = factoryLoad(config)
         } else {
             def resolver = ConfigResolveOptions.defaults().setAllowUnresolved(options.allowUnresolved).
                     setUseSystemEnvironment(options.useSystemEnvironment).appendResolver(SYSTEM_PROPERTY)
-            return config.resolve(resolver)
+            conf = config.resolve(resolver)
         }
+
+        return conf
 
     }
 
@@ -120,8 +165,12 @@ class Loader {
     }
 
 
-    static Config loadWithSchema(File schemaFile, File conf, LoaderOptions options = defaultOptions()) {
+    static Config loadWithSchemaFile(File schemaFile, File conf, LoaderOptions options = defaultOptions()) {
         return load(options.conf(conf).setSchemaFile(schemaFile))
+    }
+
+    static Config loadWithSchema(String schemaString, File conf, LoaderOptions options = defaultOptions()) {
+        return load(options.conf(conf).setSchemaString(schemaString))
     }
 
     static Config loadWithOverride(File conf, File confOverride, LoaderOptions options = defaultOptions()) {
@@ -140,7 +189,7 @@ class Loader {
         }
         def options = ConfigResolveOptions.defaults().setAllowUnresolved(true).appendResolver(SYSTEM_PROPERTY)
         def parseOpts = ConfigParseOptions.defaults()
-        if(configFile.name.toLowerCase().endsWith('.mhf')){
+        if (configFile.name.toLowerCase().endsWith('.mhf')) {
             parseOpts.setSyntax(ConfigSyntax.CONF)
         }
         return ConfigFactory.parseFile(configFile, parseOpts).resolve(options)
@@ -155,7 +204,7 @@ class Loader {
 
     static <T> T create(String json, Class<T> clazz, LoaderOptions options = null) {
         def config = load(factoryParseString(json), options)
-        return create(config, clazz, options?: defaultOptions())
+        return create(config, clazz, options ?: defaultOptions())
     }
 
     static <T> T create(URL json, Class<T> clazz, LoaderOptions options = null) {
@@ -163,9 +212,22 @@ class Loader {
         return create(config, clazz, options ?: defaultOptions())
     }
 
-    static <T> T create(Config config, Class<T> clazz, LoaderOptions options = null) {
+    static <T> T create(Config config, Class<T> clazz, LoaderOptions options = defaultOptions()) {
         try {
-            return BeanLoader.create(config, clazz, options?: defaultOptions())
+            return BeanLoader.create(config, clazz, options)
+        } catch (ConfigException.Missing e) {
+            if (!options.silent) {
+                def message = ConfUtil.configToJson(config)
+                throw new Exception(e.message + ' from:\n' + message, e)
+            } else {
+                throw e
+            }
+        }
+    }
+
+    static <T> T create(T bean, Config config, Class<T> clazz, LoaderOptions options = defaultOptions()) {
+        try {
+            return BeanLoader.create(bean, config, clazz, options)
         } catch (ConfigException.Missing e) {
             if (!options.silent) {
                 def message = ConfUtil.configToJson(config)
@@ -213,6 +275,15 @@ class Loader {
 
     }
 
+    /**
+     * Pretty JSON
+     * @param config
+     * @param namespace limit by dotted object path, e.g. `object.subObject' for only object.subObject keys/values
+     */
+    static String jsonPrint(Config config, String namespace = '') {
+        ConfUtil.configToJson(config, namespace);
+    }
+
     static class Log {
         LoaderOptions options
 
@@ -223,6 +294,15 @@ class Loader {
         def info(String string) {
             if (!options.silent) {
                 println('conf-info: ' + string)
+            }
+        }
+
+        def error(String string) {
+            if (!options.silent) {
+                if (options.config) {
+                    System.err.println(jsonPrint(options.config))
+                }
+                System.err.println('conf-info: ' + string)
             }
         }
     }

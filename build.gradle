@@ -11,7 +11,6 @@ plugins {
 repositories {
     maven { url "https://jitpack.io" }
 //    maven { url "https://oss.sonatype.org/service/local/repositories/snapshots/content/" }
-//    maven { url "https://repository.jboss.org/nexus/content/repositories/releases/" }
     mavenCentral()
 }
 
@@ -27,6 +26,8 @@ def getScmVersion = {
 
 version = project.findProperty('version') != 'unspecified' ? project.version : getScmVersion() ?: '0.0.1-SNAPSHOT'
 group = 'net.gradleutil'
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
 
 file('VERSION').text.with { versionText ->
     if (!versionText == version) {
@@ -36,11 +37,14 @@ file('VERSION').text.with { versionText ->
 }
 
 dependencies {
-    implementation 'org.codehaus.groovy:groovy-all:3.0.10'
+    implementation 'org.codehaus.groovy:groovy-all:3.0.11'
     implementation 'com.typesafe:config:1.4.2'
     implementation 'org.json:json:20220320'
     implementation 'com.github.everit-org.json-schema:org.everit.json.schema:1.14.1'
-//    implementation group: 'org.jboss.dna', name: 'dna-common', version: '0.7'
+    implementation ('com.squareup.moshi:moshi:1.13.0'){
+        transitive = false
+    }
+
 //    implementation 'org.eclipse.emfatic:org.eclipse.emfatic.core:0.8.0-SNAPSHOT'
 //    implementation group: 'org.eclipse.emf', name: 'org.eclipse.emf.ecore', version: '2.23.0'
     
@@ -76,13 +80,16 @@ jar {
 shadowJar {
     mergeServiceFiles()
     mergeGroovyExtensionModules()
-    minimize()
+    minimize {
+        exclude(dependency('com.squareup.moshi:.*:.*'))
+    }
     archiveClassifier.set('')
     relocate 'org.json', 'net.gradleutil.conf.json'
     relocate 'org.apache', 'net.gradleutil.conf'
     relocate 'org.everit', 'net.gradleutil.conf'
     relocate 'com.typesafe', 'net.gradleutil.conf'
     relocate 'com.damnhandy', 'net.gradleutil.conf'
+    relocate 'com.squareup', 'net.gradleutil.conf'
     exclude 'META-INF/resources/'
     exclude 'META-INF/versions/'
     exclude 'META-INF/native/'

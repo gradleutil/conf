@@ -27,16 +27,28 @@ class SemVer implements Serializable {
         this.patch = patch
     }
 
-    SemVer bumpMajor(){
+    SemVer bumpMajor() {
         bump(PatchLevel.MAJOR)
     }
 
-    SemVer bumpMinor(){
+    SemVer bumpMinor() {
         bump(PatchLevel.MINOR)
     }
 
-    SemVer bumpPatch(){
+    SemVer bumpPatch() {
         bump(PatchLevel.PATCH)
+    }
+
+    int getMajor() {
+        major
+    }
+
+    int getMinor() {
+        minor
+    }
+
+    int getPatch() {
+        patch
     }
 
     SemVer bump(PatchLevel patchLevel) {

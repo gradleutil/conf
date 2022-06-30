@@ -1,17 +1,10 @@
 package net.gradleutil.conf.util
 
-import groovy.transform.AnnotationCollector
-import groovy.transform.EqualsAndHashCode
-import groovy.transform.ToString
+
+import net.gradleutil.conf.annotation.Optional
+import net.gradleutil.conf.annotation.ToStringIncludeNames
 
 import static net.gradleutil.conf.util.ConfUtil.setBeanFromConfigFile
-
-@ToString(includeNames = true, includePackage = false)
-@EqualsAndHashCode
-@AnnotationCollector
-@interface ToStringIncludeNames { }
-
-@interface Optional { }
 
 @ToStringIncludeNames
 class Manytyped {
@@ -22,6 +15,7 @@ class Manytyped {
         setBeanFromConfigFile(this, conf, confOverride)
     }
 
+    @Optional
     String _1funkyProperty 
 
     Boolean isCool 

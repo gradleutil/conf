@@ -5,6 +5,7 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigRenderOptions
 import net.gradleutil.conf.BeanConfigLoader
 import net.gradleutil.conf.Loader
+import net.gradleutil.conf.json.JsonObject
 
 import java.nio.file.*
 import java.nio.file.attribute.BasicFileAttributes
@@ -27,6 +28,10 @@ class ConfUtil {
             jsonString = configObject.root().render(ConfigRenderOptions.concise().setFormatted(true))
         }
         return jsonString
+    }
+
+    static JsonObject configToJsonObject(Config configObject, String path = '') {
+        return new JsonObject(configToJson(configObject,path))
     }
 
     static URL getResourceUrl(ClassLoader classLoader, String resourcePath) {
@@ -156,9 +161,9 @@ class ConfUtil {
         id.with { upperCamel ? it.capitalize() : it }
     }
 
-    private static final Pattern ID_PATTERN = Pattern.compile("\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*")
 
     static boolean isValidJavaIdent(String identifier) {
+        final Pattern ID_PATTERN = Pattern.compile("\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*")
         return ID_PATTERN.matcher(identifier).matches()
     }
 
@@ -182,4 +187,5 @@ class ConfUtil {
         return sb.toString()
     }
 
+    
 }

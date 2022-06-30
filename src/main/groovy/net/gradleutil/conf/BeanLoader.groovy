@@ -1,6 +1,8 @@
 package net.gradleutil.conf
 
 import com.typesafe.config.*
+import com.typesafe.config.impl.SimpleConfig
+import groovy.util.logging.Log
 import net.gradleutil.conf.util.ConfUtil
 
 import java.beans.BeanInfo
@@ -10,6 +12,7 @@ import java.beans.PropertyDescriptor
 import java.lang.reflect.*
 import java.time.Duration
 
+@Log(value = "log")
 class BeanLoader {
 
     /**
@@ -20,10 +23,20 @@ class BeanLoader {
      * @return
      */
     static <T> T create(Config config, Class<T> clazz, Loader.LoaderOptions options = Loader.defaultOptions()) {
+        T bean = clazz.getDeclaredConstructor().newInstance()
+        return create(bean,config,clazz,options)
+    }
 
+    /**
+     * Create instance of class set with config values
+     * @param config
+     * @param clazz
+     * @param ignoreMissingProperties
+     * @return
+     */
+    static <T> T create(T bean, Config config, Class<T> clazz, Loader.LoaderOptions options = Loader.defaultOptions()) {
         try {
             List<PropertyDescriptor> beanProps = getPropertyDescriptors(getBeanInfo(clazz))
-            T bean = clazz.newInstance()
             for (PropertyDescriptor beanProp : beanProps) {
                 Method setter = beanProp.getWriteMethod()
                 Type parameterType = setter.getGenericParameterTypes()[0]
@@ -35,13 +48,14 @@ class BeanLoader {
                 // Is the property key or value missing in the config?
                 Object unwrapped
                 unwrapped = getValue(clazz, parameterType, parameterClass, config, configPropName, options)
+                options.logger.info '🟢' + clazz.simpleName + '🔸' + beanProp.getName() + " = ${unwrapped}"
                 if (configPropName == null || unwrapped == null) {
                     // If so, continue if the field is marked as @{link Optional}
                     if (isOptionalProperty(clazz, beanProp) || options.allowUnresolved) {
                         continue
                     }
                     // Otherwise, raise a {@link Missing} exception right here
-                    throw new ConfigException.Missing(beanProp.getName() + "= ${unwrapped} (${config.root().keySet()})")
+                    throw new ConfigException.Missing(clazz.simpleName + '#' + beanProp.getName() + " = ${unwrapped} (keys: ${config.root().keySet()})")
                 }
                 setter.invoke(bean, unwrapped)
             }
@@ -54,8 +68,8 @@ class BeanLoader {
             throw new ConfigException.BadBean("Calling bean method on " + clazz.getName() + " caused an exception", e)
         }
     }
-    
-    static BeanInfo getBeanInfo(Class clazz){
+
+    static BeanInfo getBeanInfo(Class clazz) {
         BeanInfo beanInfo
         try {
             beanInfo = Introspector.getBeanInfo(clazz)
@@ -65,7 +79,7 @@ class BeanLoader {
         beanInfo
     }
 
-    static List<PropertyDescriptor> getPropertyDescriptors(BeanInfo beanInfo){
+    static List<PropertyDescriptor> getPropertyDescriptors(BeanInfo beanInfo) {
         List<PropertyDescriptor> beanProps = new ArrayList<PropertyDescriptor>()
         for (PropertyDescriptor beanProp : beanInfo.getPropertyDescriptors()) {
             if (beanProp.getReadMethod() == null || beanProp.getWriteMethod() == null) {
@@ -77,10 +91,10 @@ class BeanLoader {
     }
 
     private static Object getValue(Class<?> beanClass, Type parameterType, Class<?> parameterClass, Config config,
-                                   String configPropName,Loader.LoaderOptions options) {
+                                   String configPropName, Loader.LoaderOptions options) {
         if (!config.hasPath(configPropName)) {
             def identPropName = ConfUtil.ident(configPropName, true, false)
-            if(config.hasPath(configPropName)){
+            if (config.hasPath(configPropName)) {
                 return getValue(beanClass, parameterType, parameterClass, config, identPropName, options)
             }
             return null
@@ -124,7 +138,7 @@ class BeanLoader {
             return config.getList(configPropName)
         } else if (parameterClass.isEnum()) {
             @SuppressWarnings("unchecked")
-            Enum enumValue = config.getEnum((Class<Enum>) parameterClass, configPropName)
+            Enum enumValue = getEnum(config, (Class<Enum>) parameterClass, configPropName)
             return enumValue
         } else if (hasAtLeastOneBeanProperty(parameterClass)) {
             return create(config.getConfig(configPropName), parameterClass as Class<Object>, options)
@@ -133,7 +147,7 @@ class BeanLoader {
         }
     }
 
-    private static Object getSetValue(Class<?> beanClass, Type parameterType, Class<?> parameterClass, Config config, String configPropName,Loader.LoaderOptions options) {
+    private static Object getSetValue(Class<?> beanClass, Type parameterType, Class<?> parameterClass, Config config, String configPropName, Loader.LoaderOptions options) {
         return new HashSet((List) getListValue(beanClass, parameterType, parameterClass, config, configPropName, options))
     }
 
@@ -171,16 +185,10 @@ class BeanLoader {
             if (config.hasPath(configPropName)) {
                 List<? extends Config> configList = config.getConfigList(configPropName)
                 for (Config listMember : configList) {
-                    try{
-                        if(listMember.root().keySet().size() == 1 && listMember.root().keySet().first() == configPropName){
-                            beanList.add(create(listMember.getConfig(configPropName), elementType.class as Class<Object>, options))
-                        } else {
-                            beanList.add(create(listMember, elementType as Class<Object>, options))
-                        }
-                    } catch (ConfigException.Missing e){
-                        println e.message
-                        def conf = listMember.getConfig(listMember.root().keySet().first())
-                        beanList.add(create(conf, elementType as Class<Object>, options))
+                    if (listMember.root().keySet().size() == 1 && listMember.root().keySet().first() == configPropName) {
+                        beanList.add(create(listMember.getConfig(configPropName), elementType.class as Class<Object>, options))
+                    } else {
+                        beanList.add(create(listMember, elementType as Class<Object>, options))
                     }
                 }
             }
@@ -239,7 +247,12 @@ class BeanLoader {
     }
 
     private static boolean isOptionalProperty(Class beanClass, PropertyDescriptor beanProp) {
+        Boolean optional
         Field field = getField(beanClass, beanProp.getName())
+        optional = field.getAnnotations().any { it.annotationType().simpleName.endsWith('Optional') }
+        if (optional || beanProp.name == 'hash') {
+            return true
+        }
         return field != null ? field.getAnnotationsByType(Optional.class).length > 0 : beanProp.getReadMethod().getAnnotationsByType(Optional.class).length > 0
     }
 
@@ -257,4 +270,40 @@ class BeanLoader {
         }
         return getField(beanClass, fieldName)
     }
+
+    static <T extends Enum<T>> T getEnum(SimpleConfig config, Class<T> enumClass, String path) {
+        ConfigValue v = config.find(path, ConfigValueType.STRING);
+        return getEnumValue(path, enumClass, v);
+    }
+
+    private static <T extends Enum<T>> T getEnumValue(String path, Class<T> enumClass, ConfigValue enumConfigValue) {
+        // escape strings for enums to avoid invalid java naming conventions
+        String enumName = toEnumValue(enumConfigValue.unwrapped() as String)
+        try {
+            return Enum.valueOf(enumClass, enumName);
+        } catch (IllegalArgumentException e) {
+            List<String> enumNames = new ArrayList<String>();
+            Enum[] enumConstants = enumClass.getEnumConstants();
+            if (enumConstants != null) {
+                for (Enum enumConstant : enumConstants) {
+                    enumNames.add(enumConstant.name());
+                }
+            }
+            throw new ConfigException.BadValue(
+                    enumConfigValue.origin(), path,
+                    String.format("The enum class %s has no constants of the name '%s' (should be one of %s.)",
+                            enumClass.getSimpleName(), enumName, enumNames));
+        }
+    }
+
+    static String toEnumValue(String string) {
+        string.replaceAll("[^A-Za-z0-9]+", '_').toUpperCase().with {
+            if (Character.isDigit(string.charAt(0))) {
+                'V' + it
+            } else {
+                it
+            }
+        }
+    }
+
 }
