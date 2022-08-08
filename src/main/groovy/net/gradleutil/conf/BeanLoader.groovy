@@ -101,40 +101,40 @@ class BeanLoader {
         }
 //        System.out.println("getting value:" + configPropName + "(" + parameterClass.getSimpleName() + ")");
 //        System.out.println("config:" + config.getAnyRef(configPropName).toString());
-        if (parameterClass == Boolean.class || parameterClass == boolean.class) {
+        if (parameterClass == Boolean || parameterClass == boolean) {
             return config.getBoolean(configPropName)
-        } else if (parameterClass == Integer.class || parameterClass == int.class || parameterClass == BigInteger.class || parameterClass == BigDecimal.class) {
+        } else if (parameterClass == Integer || parameterClass == int || parameterClass == BigInteger || parameterClass == BigDecimal) {
             return config.getInt(configPropName)
-        } else if (parameterClass == Double.class || parameterClass == double.class) {
+        } else if (parameterClass == Double || parameterClass == double) {
             return config.getDouble(configPropName)
-        } else if (parameterClass == Long.class || parameterClass == long.class) {
+        } else if (parameterClass == Long || parameterClass == long) {
             return config.getLong(configPropName)
-        } else if (parameterClass == String.class) {
+        } else if (parameterClass == String) {
             return config.getString(configPropName)
-        } else if (parameterClass == Duration.class) {
+        } else if (parameterClass == Duration) {
             return config.getDuration(configPropName)
-        } else if (parameterClass == ConfigMemorySize.class) {
+        } else if (parameterClass == ConfigMemorySize) {
             return config.getMemorySize(configPropName)
-        } else if (parameterClass == Object.class) {
+        } else if (parameterClass == Object) {
             return config.getAnyRef(configPropName)
-        } else if (parameterClass == List.class) {
+        } else if (parameterClass == List) {
             return getListValue(beanClass, parameterType, parameterClass, config, configPropName, options)
-        } else if (parameterClass == Set.class) {
+        } else if (parameterClass == Set) {
             return getSetValue(beanClass, parameterType, parameterClass, config, configPropName, options)
-        } else if (parameterClass == Map.class) {
+        } else if (parameterClass == Map) {
             // we could do better here, but right now we don't.
             Type[] typeArgs = ((ParameterizedType) parameterType).getActualTypeArguments()
-            if (typeArgs[0] != String.class || typeArgs[1] != Object.class) {
+            if (typeArgs[0] != String || typeArgs[1] != Object) {
                 throw new ConfigException.BadBean("Bean property '" + configPropName + "' of class " + beanClass.getName() + " has unsupported Map<" + typeArgs[0] + "," + typeArgs[1] + ">, only Map<String,Object> is supported right now")
             }
             return config.getObject(configPropName).unwrapped()
-        } else if (parameterClass == Config.class) {
+        } else if (parameterClass == Config) {
             return config.getConfig(configPropName)
-        } else if (parameterClass == ConfigObject.class) {
+        } else if (parameterClass == ConfigObject) {
             return config.getObject(configPropName)
-        } else if (parameterClass == ConfigValue.class) {
+        } else if (parameterClass == ConfigValue) {
             return config.getValue(configPropName)
-        } else if (parameterClass == ConfigList.class) {
+        } else if (parameterClass == ConfigList) {
             return config.getList(configPropName)
         } else if (parameterClass.isEnum()) {
             @SuppressWarnings("unchecked")
@@ -154,27 +154,27 @@ class BeanLoader {
     private static Object getListValue(Class<?> beanClass, Type parameterType, Class<?> parameterClass, Config config, String configPropName, Loader.LoaderOptions options) {
         Type elementType = ((ParameterizedType) parameterType).getActualTypeArguments()[0]
 
-        if (elementType == Boolean.class) {
+        if (elementType == Boolean) {
             return config.getBooleanList(configPropName)
-        } else if ([Integer.class, BigInteger.class, BigDecimal.class].contains(elementType)) {
+        } else if ([Integer, BigInteger, BigDecimal].contains(elementType)) {
             return config.getIntList(configPropName)
-        } else if (elementType == Double.class) {
+        } else if (elementType == Double) {
             return config.getDoubleList(configPropName)
-        } else if (elementType == Long.class) {
+        } else if (elementType == Long) {
             return config.getLongList(configPropName)
-        } else if (elementType == String.class) {
+        } else if (elementType == String) {
             return config.getStringList(configPropName)
-        } else if (elementType == Duration.class) {
+        } else if (elementType == Duration) {
             return config.getDurationList(configPropName)
-        } else if (elementType == ConfigMemorySize.class) {
+        } else if (elementType == ConfigMemorySize) {
             return config.getMemorySizeList(configPropName)
-        } else if (elementType == Object.class) {
+        } else if (elementType == Object) {
             return config.getAnyRefList(configPropName)
-        } else if (elementType == Config.class) {
+        } else if (elementType == Config) {
             return config.getConfigList(configPropName)
-        } else if (elementType == ConfigObject.class) {
+        } else if (elementType == ConfigObject) {
             return config.getObjectList(configPropName)
-        } else if (elementType == ConfigValue.class) {
+        } else if (elementType == ConfigValue) {
             return config.getList(configPropName)
         } else if (((Class<?>) elementType).isEnum()) {
             @SuppressWarnings("unchecked")
@@ -186,7 +186,7 @@ class BeanLoader {
                 List<? extends Config> configList = config.getConfigList(configPropName)
                 for (Config listMember : configList) {
                     if (listMember.root().keySet().size() == 1 && listMember.root().keySet().first() == configPropName) {
-                        beanList.add(create(listMember.getConfig(configPropName), elementType.class as Class<Object>, options))
+                        beanList.add(create(listMember.getConfig(configPropName), elementType as Class<Object>, options))
                     } else {
                         beanList.add(create(listMember, elementType as Class<Object>, options))
                     }
@@ -200,29 +200,29 @@ class BeanLoader {
 
     // null if we can't easily say; this is heuristic/best-effort
     private static ConfigValueType getValueTypeOrNull(Class<?> parameterClass) {
-        if (parameterClass == Boolean.class || parameterClass == boolean.class) {
+        if (parameterClass == Boolean || parameterClass == boolean) {
             return ConfigValueType.BOOLEAN
-        } else if (parameterClass == Integer.class || parameterClass == int.class || parameterClass == BigInteger.class) {
+        } else if (parameterClass == Integer || parameterClass == int || parameterClass == BigInteger) {
             return ConfigValueType.NUMBER
-        } else if (parameterClass == Double.class || parameterClass == double.class) {
+        } else if (parameterClass == Double || parameterClass == double) {
             return ConfigValueType.NUMBER
-        } else if (parameterClass == Long.class || parameterClass == long.class) {
+        } else if (parameterClass == Long || parameterClass == long) {
             return ConfigValueType.NUMBER
-        } else if (parameterClass == String.class) {
+        } else if (parameterClass == String) {
             return ConfigValueType.STRING
-        } else if (parameterClass == Duration.class) {
+        } else if (parameterClass == Duration) {
             return null
-        } else if (parameterClass == ConfigMemorySize.class) {
+        } else if (parameterClass == ConfigMemorySize) {
             return null
-        } else if (parameterClass == List.class) {
+        } else if (parameterClass == List) {
             return ConfigValueType.LIST
-        } else if (parameterClass == Map.class) {
+        } else if (parameterClass == Map) {
             return ConfigValueType.OBJECT
-        } else if (parameterClass == Config.class) {
+        } else if (parameterClass == Config) {
             return ConfigValueType.OBJECT
-        } else if (parameterClass == ConfigObject.class) {
+        } else if (parameterClass == ConfigObject) {
             return ConfigValueType.OBJECT
-        } else if (parameterClass == ConfigList.class) {
+        } else if (parameterClass == ConfigList) {
             return ConfigValueType.LIST
         } else {
             return null
@@ -253,7 +253,7 @@ class BeanLoader {
         if (optional || beanProp.name == 'hash') {
             return true
         }
-        return field != null ? field.getAnnotationsByType(Optional.class).length > 0 : beanProp.getReadMethod().getAnnotationsByType(Optional.class).length > 0
+        return field != null ? field.getAnnotationsByType(Optional).length > 0 : beanProp.getReadMethod().getAnnotationsByType(Optional).length > 0
     }
 
     private static Field getField(Class beanClass, String fieldName) {
