@@ -109,6 +109,10 @@ class Loader {
             options.schema = SchemaUtil.getSchema(options.schemaString)
         } else if (options.schemaFile) {
             log.info("Loading schema from ${options.schemaFile}")
+            if(!options.schemaFile.exists()){
+                log.info("schema file ${options.schemaFile}, nonexistent, generating from conf")
+                
+            }
             options.schema = SchemaUtil.getSchema(options.schemaFile)
         }
 

@@ -24,7 +24,7 @@ class BeanLoader {
      */
     static <T> T create(Config config, Class<T> clazz, Loader.LoaderOptions options = Loader.defaultOptions()) {
         T bean = clazz.getDeclaredConstructor().newInstance()
-        return create(bean,config,clazz,options)
+        return create(bean, config, clazz, options)
     }
 
     /**
@@ -103,7 +103,7 @@ class BeanLoader {
 //        System.out.println("config:" + config.getAnyRef(configPropName).toString());
         if (parameterClass == Boolean.class || parameterClass == boolean.class) {
             return config.getBoolean(configPropName)
-        } else if (parameterClass == Integer.class || parameterClass == int.class) {
+        } else if (parameterClass == Integer.class || parameterClass == int.class || parameterClass == BigInteger.class || parameterClass == BigDecimal.class) {
             return config.getInt(configPropName)
         } else if (parameterClass == Double.class || parameterClass == double.class) {
             return config.getDouble(configPropName)
@@ -156,7 +156,7 @@ class BeanLoader {
 
         if (elementType == Boolean.class) {
             return config.getBooleanList(configPropName)
-        } else if (elementType == Integer.class) {
+        } else if ([Integer.class, BigInteger.class, BigDecimal.class].contains(elementType)) {
             return config.getIntList(configPropName)
         } else if (elementType == Double.class) {
             return config.getDoubleList(configPropName)
@@ -202,7 +202,7 @@ class BeanLoader {
     private static ConfigValueType getValueTypeOrNull(Class<?> parameterClass) {
         if (parameterClass == Boolean.class || parameterClass == boolean.class) {
             return ConfigValueType.BOOLEAN
-        } else if (parameterClass == Integer.class || parameterClass == int.class) {
+        } else if (parameterClass == Integer.class || parameterClass == int.class || parameterClass == BigInteger.class) {
             return ConfigValueType.NUMBER
         } else if (parameterClass == Double.class || parameterClass == double.class) {
             return ConfigValueType.NUMBER
@@ -272,27 +272,26 @@ class BeanLoader {
     }
 
     static <T extends Enum<T>> T getEnum(SimpleConfig config, Class<T> enumClass, String path) {
-        ConfigValue v = config.find(path, ConfigValueType.STRING);
-        return getEnumValue(path, enumClass, v);
+        ConfigValue v = config.find(path, ConfigValueType.STRING)
+        return getEnumValue(path, enumClass, v)
     }
 
     private static <T extends Enum<T>> T getEnumValue(String path, Class<T> enumClass, ConfigValue enumConfigValue) {
         // escape strings for enums to avoid invalid java naming conventions
         String enumName = toEnumValue(enumConfigValue.unwrapped() as String)
         try {
-            return Enum.valueOf(enumClass, enumName);
+            return Enum.valueOf(enumClass, enumName)
         } catch (IllegalArgumentException e) {
-            List<String> enumNames = new ArrayList<String>();
-            Enum[] enumConstants = enumClass.getEnumConstants();
+            List<String> enumNames = new ArrayList<String>()
+            Enum[] enumConstants = enumClass.getEnumConstants()
             if (enumConstants != null) {
                 for (Enum enumConstant : enumConstants) {
-                    enumNames.add(enumConstant.name());
+                    enumNames.add(enumConstant.name())
                 }
             }
-            throw new ConfigException.BadValue(
-                    enumConfigValue.origin(), path,
+            throw new ConfigException.BadValue(enumConfigValue.origin(), path,
                     String.format("The enum class %s has no constants of the name '%s' (should be one of %s.)",
-                            enumClass.getSimpleName(), enumName, enumNames));
+                            enumClass.getSimpleName(), enumName, enumNames))
         }
     }
 
