@@ -36,6 +36,15 @@ class BeanLoader {
      */
     static <T> T create(T bean, Config config, Class<T> clazz, Loader.LoaderOptions options = Loader.defaultOptions()) {
         try {
+            if (config.root().keySet().size() == 1) {
+                String key = config.root().keySet().first()
+                if (config.root().keySet().first().toLowerCase() == clazz.simpleName.toLowerCase()) {
+                    config = config.getConfig(key)
+                }
+            }
+            if(options.resolveStringValues){
+                config = ConfUtil.resolveStringValues(config)
+            }
             List<PropertyDescriptor> beanProps = getPropertyDescriptors(getBeanInfo(clazz))
             for (PropertyDescriptor beanProp : beanProps) {
                 Method setter = beanProp.getWriteMethod()
@@ -82,7 +91,7 @@ class BeanLoader {
     static List<PropertyDescriptor> getPropertyDescriptors(BeanInfo beanInfo) {
         List<PropertyDescriptor> beanProps = new ArrayList<PropertyDescriptor>()
         for (PropertyDescriptor beanProp : beanInfo.getPropertyDescriptors()) {
-            if (beanProp.getReadMethod() == null || beanProp.getWriteMethod() == null) {
+            if (beanProp.getReadMethod() == null || beanProp.getWriteMethod() == null || beanProp.name == 'metaClass') {
                 continue
             }
             beanProps.add(beanProp)

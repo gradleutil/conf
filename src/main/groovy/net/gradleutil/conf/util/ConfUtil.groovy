@@ -1,16 +1,18 @@
 package net.gradleutil.conf.util
 
-
-import com.typesafe.config.Config
-import com.typesafe.config.ConfigRenderOptions
+import com.typesafe.config.*
+import com.typesafe.config.parser.ConfigDocumentFactory
 import net.gradleutil.conf.BeanConfigLoader
 import net.gradleutil.conf.Loader
+import net.gradleutil.conf.config.impl.ConfigVisitor
 import net.gradleutil.conf.json.JsonObject
 
 import java.nio.file.*
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.spi.FileSystemProvider
 import java.util.regex.Pattern
+
+import static com.typesafe.config.ConfigFactory.parseString
 
 class ConfUtil {
 
@@ -21,7 +23,7 @@ class ConfUtil {
         }
         if (path) {
             if (!configObject.hasPath(path)) {
-                throw new Exception("Config does not have path ${path}")
+                throw new Exception("Config does not have path ${path} (keys: ${configObject.root().keySet().take(3).toString()}...)")
             }
             jsonString = configObject.getValue(path).render(ConfigRenderOptions.concise().setFormatted(true))
         } else {
@@ -31,7 +33,7 @@ class ConfUtil {
     }
 
     static JsonObject configToJsonObject(Config configObject, String path = '') {
-        return new JsonObject(configToJson(configObject,path))
+        return new JsonObject(configToJson(configObject, path))
     }
 
     static URL getResourceUrl(ClassLoader classLoader, String resourcePath) {
@@ -187,5 +189,31 @@ class ConfUtil {
         return sb.toString()
     }
 
-    
+
+    static Config resolveStringValues(Config config) {
+
+        def configDocument = ConfigDocumentFactory.parseString(configToJson(config), ConfigParseOptions.defaults().setSyntax(ConfigSyntax.JSON))
+
+        new ConfigVisitor() {
+            @Override
+            void visitString(String path, ConfigValue configValue) {
+                String string = configValue.unwrapped()
+                def token = string.find(/\$\{(.*)}/)
+                if (token) {
+                    def findPath = ((token =~ /\{(.*)}/).findAll() as List<List>)*.last().last()
+                    def foundValue = config.entrySet().find { it.key == findPath }?.value?.render()
+                    if (foundValue) {
+                        def newValue = string.replace(token, foundValue)
+                        //configDocument = configDocument.withValueText(path, newValue)
+                        def newConfigValue = ConfigValueFactory.fromAnyRef(newValue)
+                        configDocument = configDocument.withValue(path, newConfigValue)
+                    }
+                }
+            }
+        }.visit(config)
+
+        def strin = configDocument.render()
+        parseString(strin)
+
+    }
 }

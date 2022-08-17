@@ -30,6 +30,7 @@ class Loader {
         Boolean useSystemEnvironment = false
         Boolean useSystemProperties = false
         Boolean useReferences = false
+        Boolean resolveStringValues = true
         Boolean allowUnresolved = false
         Boolean invalidateCaches = false
         Boolean singularizeClasses = true
@@ -146,6 +147,10 @@ class Loader {
                     setUseSystemEnvironment(options.useSystemEnvironment).appendResolver(SYSTEM_PROPERTY)
             conf = config.resolve(resolver)
         }
+        
+        if(options.resolveStringValues){
+            conf = ConfUtil.resolveStringValues(conf)
+        }
 
         return conf
 
@@ -207,7 +212,7 @@ class Loader {
     }
 
     static <T> T create(String json, Class<T> clazz, LoaderOptions options = null) {
-        def config = load(factoryParseString(json), options)
+        def config = load(factoryParseString(json), options ?: defaultOptions())
         return create(config, clazz, options ?: defaultOptions())
     }
 
@@ -222,7 +227,7 @@ class Loader {
         } catch (ConfigException.Missing e) {
             if (!options.silent) {
                 def message = ConfUtil.configToJson(config)
-                throw new Exception(e.message + ' from:\n' + message, e)
+                throw new Exception(e.message.replace('setting found for key', 'value for method') + ' from:\n' + message, e)
             } else {
                 throw e
             }
