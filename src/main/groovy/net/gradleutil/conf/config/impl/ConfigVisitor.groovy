@@ -2,75 +2,101 @@ package net.gradleutil.conf.config.impl
 
 import com.typesafe.config.*
 import groovy.transform.CompileStatic
+import groovy.transform.stc.ClosureParams
+import groovy.transform.stc.FirstParam
 
 @CompileStatic
 abstract class ConfigVisitor {
 
-    void visit(Config config) {
-        config.entrySet().each {
-            visit(it.key, it.value)
-        }
-    }
+	Stack<String> entryStack = []
 
-    void visit(String key, ConfigValue configValue) {
-        def elementType = configValue.valueType()
-        if (elementType == ConfigValueType.BOOLEAN) {
-            callVisitBoolean(key,configValue)
-        } else if (elementType == ConfigValueType.NUMBER) {
-            callVisitNumber(key,configValue)
-        } else if (elementType == ConfigValueType.STRING) {
-            callVisitString(key,configValue)
-        } else if (elementType == ConfigValueType.LIST) {
-            callVisitList(key,configValue as ConfigList)
-        } else if (elementType == ConfigValueType.OBJECT) {
-            callVisitObject(key,configValue as ConfigObject)
-        } else if (elementType == ConfigValueType.NULL) {
-            callVisitNull(key,configValue)
-        }
-    }
+	String getStackPath() {
+		entryStack.join('.')
+	}
 
-    void callVisitObject(String key, ConfigObject configObject) {
-        visitObject(key, configObject)
-    }
+	def pushPop(Map.Entry<String, ConfigValue> entry, @ClosureParams(FirstParam) final Closure closure) {
+		entryStack.push(entry.key)
+		closure.delegate = entry
+		closure.call(entry)
+		entryStack.pop()
+	}
 
-    void callVisitList(String key, ConfigList configList) {
-        visitList(key,configList)
-        configList.each { visit(key, it) }
-    }
+	void visit(Config config) {
+		config.entrySet().each {
+			pushPop(it) {
+				visit(it)
+			}
+		}
+	}
 
-    void callVisitString(String key, ConfigValue configValue) {
-        visitString(key,configValue)
-    }
+	void visit(Map.Entry<String, ConfigValue> entry) {
+		def elementType = entry.value.valueType()
+		if (elementType == ConfigValueType.BOOLEAN) {
+			callVisitBoolean(entry)
+		} else if (elementType == ConfigValueType.NUMBER) {
+			callVisitNumber(entry)
+		} else if (elementType == ConfigValueType.STRING) {
+			callVisitString(entry)
+		} else if (elementType == ConfigValueType.LIST) {
+			callVisitList(entry)
+		} else if (elementType == ConfigValueType.OBJECT) {
+			callVisitObject(entry)
+		} else if (elementType == ConfigValueType.NULL) {
+			callVisitNull(entry)
+		} else {
+			throw new Exception("Don't know how to handle ${elementType}")
+		}
+	}
 
-    void callVisitNumber(String key, ConfigValue configValue) {
-        visitNumber(key,configValue)
-    }
+	void callVisitObject(Map.Entry<String, ConfigValue> entry) {
+		visitObject(entry.key, entry.value as ConfigObject)
+	}
 
-    void callVisitNull(String key, ConfigValue configValue) {
-        visitNull(key,configValue)
-    }
+	void callVisitConfigList(ConfigList configList) {
+		if (!configList) return
+		configList.each {
+			if (it instanceof ConfigList) {
+				callVisitConfigList(it as ConfigList)
+			} else if (it instanceof ConfigObject) {
+				visit((it as ConfigObject).toConfig())
+			} else {
+				visitString(entryStack.peek(), it as ConfigValue)
+			}
+		}
+	}
 
-    void callVisitBoolean(String key, ConfigValue configValue) {
-        visitBoolean(key,configValue)
-    }
+	void callVisitList(Map.Entry<String, ConfigValue> entry) {
+		visitList(entry.key, entry.value as ConfigList)
+		callVisitConfigList(entry.value as ConfigList)
+	}
+
+	void callVisitString(Map.Entry<String, ConfigValue> entry) {
+		visitString(entry.key, entry.value)
+	}
+
+	void callVisitNumber(Map.Entry<String, ConfigValue> entry) {
+		visitNumber(entry.key, entry.value)
+	}
+
+	void callVisitNull(Map.Entry<String, ConfigValue> entry) {
+		visitNull(entry.key, entry.value)
+	}
+
+	void callVisitBoolean(Map.Entry<String, ConfigValue> entry) {
+		visitBoolean(entry.key, entry.value)
+	}
 
 
-    void visitObject(String key, ConfigObject configObject) {
-    }
+	void visitObject(String key, ConfigObject configObject) {}
 
-    void visitList(String key, ConfigList configList) {
-    }
+	void visitList(String key, ConfigList configList) {}
 
-    void visitString(String key, ConfigValue configValue) {
-    }
+	void visitString(String key, ConfigValue configValue) {}
 
-    void visitNumber(String key, ConfigValue configValue) {
-    }
+	void visitNumber(String key, ConfigValue configValue) {}
 
-    void visitNull(String key, ConfigValue configValue) {
-    }
+	void visitNull(String key, ConfigValue configValue) {}
 
-    void visitBoolean(String key, ConfigValue configValue) {
-    }
+	void visitBoolean(String key, ConfigValue configValue) {}
 
 }

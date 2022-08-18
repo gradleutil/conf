@@ -120,6 +120,8 @@ class BeanLoader {
             return config.getLong(configPropName)
         } else if (parameterClass == String) {
             return config.getString(configPropName)
+        } else if (parameterClass == Number) {
+            return config.getNumber(configPropName)
         } else if (parameterClass == Duration) {
             return config.getDuration(configPropName)
         } else if (parameterClass == ConfigMemorySize) {

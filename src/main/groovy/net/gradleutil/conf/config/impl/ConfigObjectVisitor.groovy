@@ -6,77 +6,86 @@ import groovy.transform.CompileStatic
 @CompileStatic
 abstract class ConfigObjectVisitor {
 
-    Stack<Map.Entry<String, ConfigValue>> entryStack = []
+	Stack<Map.Entry<String, ConfigValue>> entryStack = []
 
-    void visit(Config config) {
-        config.root().entrySet().each {
-            entryStack.push(it)
-            visit(it.value)
-            entryStack.pop()
-        }
-    }
+	void visit(Config config) {
+		config.root().entrySet().each {
+			entryStack.push(it)
+			visit(it.value)
+			entryStack.pop()
+		}
+	}
 
-    void visit(ConfigValue configValue) {
-        def elementType = configValue.valueType()
-        if (elementType == ConfigValueType.BOOLEAN) {
-            callVisitBoolean(configValue)
-        } else if (elementType == ConfigValueType.NUMBER) {
-            callVisitNumber(configValue)
-        } else if (elementType == ConfigValueType.STRING) {
-            callVisitString(configValue)
-        } else if (elementType == ConfigValueType.LIST) {
-            callVisitList(configValue as ConfigList)
-        } else if (elementType == ConfigValueType.OBJECT) {
-            callVisitObject(configValue as ConfigObject)
-        } else if (elementType == ConfigValueType.NULL) {
-            callVisitNull(configValue)
-        }
-    }
+	void visit(ConfigValue configValue) {
+		def elementType = configValue.valueType()
+		if (elementType == ConfigValueType.BOOLEAN) {
+			callVisitBoolean(configValue)
+		} else if (elementType == ConfigValueType.NUMBER) {
+			callVisitNumber(configValue)
+		} else if (elementType == ConfigValueType.STRING) {
+			callVisitString(configValue)
+		} else if (elementType == ConfigValueType.LIST) {
+			callVisitList(configValue as ConfigList)
+		} else if (elementType == ConfigValueType.OBJECT) {
+			callVisitObject(configValue as ConfigObject)
+		} else if (elementType == ConfigValueType.NULL) {
+			callVisitNull(configValue)
+		} else {
+			throw new Exception("dunno how to handle ${elementType}")
+		}
+	}
 
-    void callVisitObject(ConfigObject configObject) {
-        visitObject(configObject)
-        visit(configObject.toConfig())
-    }
+	void callVisitObject(ConfigObject configObject) {
+		visitObject(configObject)
+		visit(configObject.toConfig())
+	}
 
-    void callVisitList(ConfigList configList) {
-        visitList(configList)
-        configList.each { visit(it) }
-    }
+	Stack<ConfigValue> valueStack = []
 
-    void callVisitString(ConfigValue configValue) {
-        visitString(configValue)
-    }
+	void callVisitList(ConfigList configList) {
+		visitList(configList)
+		configList.each {
+			valueStack.push(it)
+			visit(it)
+			valueStack.pop()
 
-    void callVisitNumber(ConfigValue configValue) {
-        visitNumber(configValue)
-    }
+		}
+	}
 
-    void callVisitNull(ConfigValue configValue) {
-        visitNull(configValue)
-    }
+	void callVisitString(ConfigValue configValue) {
+		visitString(configValue)
+	}
 
-    void callVisitBoolean(ConfigValue configValue) {
-        visitBoolean(configValue)
-    }
+	void callVisitNumber(ConfigValue configValue) {
+		visitNumber(configValue)
+	}
+
+	void callVisitNull(ConfigValue configValue) {
+		visitNull(configValue)
+	}
+
+	void callVisitBoolean(ConfigValue configValue) {
+		visitBoolean(configValue)
+	}
 
 
-    void visitObject(ConfigObject configObject) {
-    }
+	void visitObject(ConfigObject configObject) {
+	}
 
-    void visitList(ConfigList configList) {
-    }
+	void visitList(ConfigList configList) {
+	}
 
-    void visitString(ConfigValue configValue) {
-    }
+	void visitString(ConfigValue configValue) {
+	}
 
-    void visitNumber(ConfigValue configValue) {
-    }
+	void visitNumber(ConfigValue configValue) {
+	}
 
-    void visitNull(ConfigValue configValue) {
-    }
+	void visitNull(ConfigValue configValue) {
+	}
 
-    void visitBoolean(ConfigValue configValue) {
-    }
+	void visitBoolean(ConfigValue configValue) {
+	}
 
 
 }
