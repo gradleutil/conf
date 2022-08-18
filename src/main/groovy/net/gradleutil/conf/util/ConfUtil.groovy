@@ -211,7 +211,7 @@ class ConfUtil {
 			@Override
 			void visitString(ConfigValue configValue) {
 				String string = configValue.unwrapped()
-				def token = string.find(/\$\{(.*)}/)
+				def token = string.find(/\$\{(.*)}/)?.replace('"', '')
 				if (token) {
 					String findPath = ((token =~ /\{(.*)}/).findAll() as List<List>)*.last().last()
 					def foundValue
@@ -235,8 +235,9 @@ class ConfUtil {
 					}
 					if (foundValue) {
 						if (foundValue instanceof String) {
-							string.replace('"', '')
-							replacements.put(token, "\"${foundValue}\"")
+							foundValue = foundValue.replace(replacements).replace('"', '')
+							foundValue = '"' + foundValue + '"'
+							replacements.put(token, foundValue)
 //							configDocument = configDocument.withValueText(stackPath, "\"${newValue}\"")
 						} else if (foundValue instanceof Integer) {
 							replacements.put(token, foundValue.toString())
@@ -250,11 +251,7 @@ class ConfUtil {
 			}
 		}.visit(config)
 
-		def string
-		string = configDocument.render()
-		replacements.each {
-			string = string.replace(it.key, it.value)
-		}
+		def string = configDocument.render().replace(replacements)
 		parseString(string)
 
 	}

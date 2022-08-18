@@ -1,6 +1,7 @@
 package net.gradleutil.conf.util
 
 import com.typesafe.config.Config
+import com.typesafe.config.ConfigRenderOptions
 import net.gradleutil.conf.AbstractTest
 import net.gradleutil.conf.Loader
 
@@ -70,7 +71,7 @@ class ConfUtilTest extends AbstractTest {
 
 		then:
 
-		println ConfUtil.configToJson(config).toString()
+		println config.root().render(ConfigRenderOptions.concise().tap { formatted = true })
 
 		config.getConfig('library').getConfigList('books').size() == 2
 		config.getConfig('library').getConfigList('books').get(1).getInt('pages') == 330
@@ -109,6 +110,32 @@ class ConfUtilTest extends AbstractTest {
 		//println ConfUtil.configToJson(config).toString()
 		config.getConfig("103_D").getInt('e') == 103
 		config.getConfig("103_E").getConfig('f').getInt('e') == 103
+
+	}
+
+	def "test chained substitution"() {
+		setup:
+		def conf = new File(base, 'config.conf').tap {
+			text = '''
+			{
+				"mainSuffix": "suffix",
+				"sub": {
+					"concat1": "${mainSuffix}More",
+					"domain": "e-cycle.com"
+				},
+				"sub2": {
+					"concat2": "${sub.concat1}"
+				},
+			}
+			'''.stripIndent()
+		}
+
+		when:
+		def config = Loader.load(conf)
+
+		then:
+		println config.root().render(ConfigRenderOptions.concise().tap { formatted = true })
+		config.getConfig("sub2").getValue('concat2').unwrapped() == 'suffixMore'
 
 	}
 
