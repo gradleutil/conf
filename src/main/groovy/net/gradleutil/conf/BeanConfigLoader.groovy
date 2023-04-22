@@ -40,7 +40,11 @@ class BeanConfigLoader {
             if (setter && value != null) {
                 def firstParam = setter.getWriteMethod().parameters.first()
                 try {
-                    if (firstParam.type.simpleName == 'Long') {
+                    if(firstParam.type?.superclass?.simpleName == 'Enum' && value instanceof String){
+                        def consts = Class.forName(firstParam.type.name).getEnumConstants()
+                        def eVal = consts.find{it.toString() == value }
+                        setter.getWriteMethod().invoke(bean, eVal)
+                    } else if (firstParam.type.simpleName == 'Long') {
                         setter.getWriteMethod().invoke(bean, value as Long)
                     } else {
                         setter.getWriteMethod().invoke(bean, value)

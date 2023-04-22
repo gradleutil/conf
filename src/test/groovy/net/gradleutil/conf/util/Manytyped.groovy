@@ -15,26 +15,46 @@ class Manytyped {
         setBeanFromConfigFile(this, conf, confOverride)
     }
 
-    @Optional
-    String _1funkyProperty 
+	Type type
+	enum Type  {
+		VANILLA("vanilla"),FORGE("forge"),SPIGOT("spigot"),PAPER("paper")
 
-    Boolean isCool 
+		private final String name;
 
-    Action action 
+		private Type(String s) {
+			name = s;
+		}
 
-    String dollarstart 
+		public boolean equalsName(String otherName) {
+			return name.equals(otherName);
+		}
 
-    String someNull 
+		public String toString() {
+			return this.name;
+		}
+	}
 
-    Long max 
 
-    String description 
+	@Optional
+    String _1funkyProperty
 
-    List<ToDo> todos 
+    Boolean isCool
 
-    List<String> aSimpleStringList 
+    Action action
 
-    List<Task> tasks 
+    String dollarstart
+
+    String someNull
+
+    Long max
+
+    String description
+
+    List<ToDo> todos
+
+    List<String> aSimpleStringList
+
+    List<Task> tasks
 
 }
 
@@ -43,11 +63,11 @@ class Action {
 
     Action(){ }
 
-    SubAction subAction 
+    SubAction subAction
 
-    String name 
+    String name
 
-    String type 
+    String type
 
 }
 
@@ -56,11 +76,11 @@ class SubAction {
 
     SubAction(){ }
 
-    String name 
+    String name
 
-    String action 
+    String action
 
-    SubSubAction subSubAction 
+    SubSubAction subSubAction
 
 }
 
@@ -69,7 +89,7 @@ class SubSubAction {
 
     SubSubAction(){ }
 
-    String subname 
+    String subname
 
 }
 
@@ -78,9 +98,9 @@ class ToDo {
 
     ToDo(){ }
 
-    String name 
+    String name
 
-    String type 
+    String type
 
 }
 
@@ -89,8 +109,8 @@ class Task {
 
     Task(){ }
 
-    String name 
+    String name
 
-    String type 
+    String type
 
 }

@@ -1,7 +1,6 @@
 package net.gradleutil.conf
 
 import com.typesafe.config.ConfigException
-import com.typesafe.config.ConfigRenderOptions
 import com.typesafe.config.ConfigValue
 import net.gradleutil.conf.bean.PersonList
 
