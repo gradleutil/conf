@@ -1,0 +1,40 @@
+{
+  "$schema": "../../../main/resources/schema/MinecraftConfig.schema.json",
+  "name": "my nice minecraft config",
+  "publishing": [
+    {
+      "type": "file",
+      "path": "/tmp/mcuni"
+    }
+  ],
+  "git": {
+    "dir": "./git",
+    "repoUri": "ut"
+  },
+  "minecrafts": [
+    {
+      "version": "1.10",
+      "type": "vanilla",
+      "mods": [
+        {
+          "name": "my awesome mod",
+          "slug": "atmosphere",
+          "id": "nothanks",
+          "description": "this is a  lot of text",
+          "modArtifacts": [
+            {
+              "name": "name",
+              "version": "234",
+              "fileId": "234",
+              "downloadUrl": "",
+              "minecraft": {
+                "version": "1.15.2",
+                "type": "paper"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

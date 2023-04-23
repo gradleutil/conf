@@ -1,4 +1,4 @@
-package net.gradleutil.conf.util
+package net.gradleutil.conf.bean
 
 
 import net.gradleutil.conf.annotation.Optional

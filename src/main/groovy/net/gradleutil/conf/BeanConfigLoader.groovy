@@ -89,7 +89,7 @@ class BeanConfigLoader {
         obClass
     }
 
-    private static Object getValue(ConfigValue configValue, String configPropName, String className, List<PropertyDescriptor> beanProps, classLoader, ignoreMissingProperties) {
+    private static Object getValue(ConfigValue configValue, String configPropName, String className, List<PropertyDescriptor> beanProps, ClassLoader classLoader, Boolean ignoreMissingProperties) {
         def value
         def identPropName = ident(configPropName, true, false, false).toLowerCase()
         def setter = beanProps.find { it.getWriteMethod().name.toLowerCase() == 'set' + identPropName }
@@ -117,10 +117,14 @@ class BeanConfigLoader {
                             def conf = configObject.get(configObject.keySet().first()) as ConfigObject
                             return getValue(conf, configPropName, packageName + '.' + firstKey, beanProps, classLoader, ignoreMissingProperties)
                         }
-                        return getValue(it, configPropName, className, beanProps, classLoader, ignoreMissingProperties)
+                        def beanProp = beanProps.find{it.name == configPropName}
+                        def beanReturnType = beanProp.readMethod.genericReturnType.typeName.replaceAll(/.*<(.*)>/,'$1')
+                        return getValue(it, configPropName, beanReturnType, beanProps, classLoader, ignoreMissingProperties)
 
                     }
-                    return getValue(it, configPropName, className, beanProps, classLoader, ignoreMissingProperties)
+                    def beanProp = beanProps.find{it.name == configPropName}
+                    def beanReturnType = beanProp.readMethod.genericReturnType.typeName.replaceAll(/.*<(.*)>/,'$1')
+                    return getValue(it, configPropName, beanReturnType, beanProps, classLoader, ignoreMissingProperties)
                 }
             } else if (configValue.valueType() == ConfigValueType.NUMBER) {
                 def number = configValue.unwrapped()

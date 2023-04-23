@@ -1,8 +1,8 @@
 package net.gradleutil.conf.util
 
 import net.gradleutil.conf.AbstractTest
-import net.gradleutil.conf.BeanConfigLoader
-import net.gradleutil.conf.Loader
+import net.gradleutil.conf.bean.Manytyped
+import net.gradleutil.conf.bean.MinecraftConfig
 
 class BeanLoaderTest extends AbstractTest {
 
@@ -29,6 +29,19 @@ class BeanLoaderTest extends AbstractTest {
         manytyped.get_1funkyProperty() == 'funky1'
         manytyped.getTasks().size() == 1
         manytyped.aSimpleStringList.size() == 2
+    }
+
+    def "test mc bean"() {
+        setup:
+        def configFile = new File('src/test/resources/json/MinecraftConfig.json')
+
+        when:
+        MinecraftConfig minecraftConfig = new MinecraftConfig(configFile.text)
+
+
+        then:
+        minecraftConfig.minecrafts.size() > 0
+
     }
 
 
