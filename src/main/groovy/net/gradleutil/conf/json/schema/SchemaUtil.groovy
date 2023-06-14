@@ -125,10 +125,11 @@ class SchemaUtil extends SchemaLoader {
      * @param dataJson
      * @return
      */
-    static String editor(String schemaJson, String dataJson) {
+    static String editor(String schemaJson, String dataJson, String uiSchema = '{}') {
         def schemaForm
-        schemaForm = new File(SchemaUtil.class.getResource('/editor/index.html').toURI()).text
+        schemaForm = SchemaUtil.class.getResourceAsStream('/editor/index.html').text
         schemaForm.replace('@schema', schemaJson)
+                .replace('@uiSchema', uiSchema)
                 .replace('@formData', dataJson)
     }
 

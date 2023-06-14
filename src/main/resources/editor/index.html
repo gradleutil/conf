@@ -33,16 +33,7 @@
 
 	const serverOptions = @formData;
 
-	const uiSchema = {
-		name: {
-			"ui:autofocus": true,
-			"ui:emptyValue": "",
-		},
-		password: {
-			"ui:widget": "password",
-			"ui:help": "Hint: Make it strong!",
-		},
-	};
+	const uiSchema = @uiSchema;
 
 	const App = class App extends React.Component {
 		constructor(props) {
