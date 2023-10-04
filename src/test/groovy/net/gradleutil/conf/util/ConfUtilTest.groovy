@@ -1,6 +1,6 @@
 package net.gradleutil.conf.util
 
-import com.typesafe.config.Config
+
 import com.typesafe.config.ConfigRenderOptions
 import net.gradleutil.conf.AbstractTest
 import net.gradleutil.conf.Loader
@@ -9,10 +9,10 @@ import static net.gradleutil.conf.Loader.defaultOptions
 
 class ConfUtilTest extends AbstractTest {
 
-	def "test json print simple conf"() {
-		setup:
-		def conf = new File(base, 'config.conf').tap {
-			text = """
+    def "test json print simple conf"() {
+        setup:
+        def conf = new File(base, 'config.conf').tap {
+            text = """
 			{
 				"car": {
 					"engine": {
@@ -28,63 +28,63 @@ class ConfUtilTest extends AbstractTest {
 				}
 			}
 			""".stripIndent()
-		}
+        }
 
-		when:
-		def config = Loader.load(conf)
+        when:
+        def config = Loader.load(conf)
 
-		then:
-		def car = Loader.load(ConfUtil.configToJson(config, 'car'))
-		car.getConfig('engine').getString('type') == 'sterling'
+        then:
+        def car = Loader.load(ConfUtil.configToJson(config, 'car'))
+        car.getConfig('engine').getString('type') == 'sterling'
 
-		def engine = Loader.load(ConfUtil.configToJson(config, 'car.engine'))
-		engine.getString('type') == 'sterling'
-		engine.getString("moreDoors") == "4"
-		engine.getString("inString") == "in 4 ling"
+        def engine = Loader.load(ConfUtil.configToJson(config, 'car.engine'))
+        engine.getString('type') == 'sterling'
+        engine.getString("moreDoors") == "4"
+        engine.getString("inString") == "in 4 ling"
 
-	}
-
-
-	def "test substitutions in json to object strings"() {
-		setup:
-		def libraryJson = new File('src/test/resources/json/library.json')
-
-		def conf = new File(base, 'config.conf').tap { text = libraryJson.text }
-
-		when:
-		def config = Loader.load(conf)
-		def library = Loader.create(config, Library, defaultOptions().silent(false))
-
-		then:
-		library.books.size() == 2
-
-	}
-
-	def "test substitutions in json strings"() {
-		setup:
-		def libraryJson = new File('src/test/resources/json/library.json')
-
-		def conf = new File(base, 'config.conf').tap { text = libraryJson.text }
-
-		when:
-		def config = Loader.load(conf)
-
-		then:
-
-		println config.root().render(ConfigRenderOptions.concise().tap { formatted = true })
-
-		config.getConfig('library').getConfigList('books').size() == 2
-		config.getConfig('library').getConfigList('books').get(1).getInt('pages') == 330
-		(config.getConfig('library').getConfigList('books').get(1).
-				getList('authors').get(0) as ConfigObject).get('lastName').toString() == 'Quoted("Jackson Suzy")'
-
-	}
+    }
 
 
-	def "test simple substitution"() {
-		setup:
-		def conf = new File(base, 'config.conf').tap {
-			text = '''
+    def "test substitutions in json to object strings"() {
+        setup:
+        def libraryJson = new File('src/test/resources/json/library.json')
+
+        def conf = new File(base, 'config.conf').tap { text = libraryJson.text }
+
+        when:
+        def config = Loader.load(conf)
+        def library = Loader.create(config, Library, defaultOptions().silent(false))
+
+        then:
+        library.books.size() == 2
+
+    }
+
+    def "test substitutions in json strings"() {
+        setup:
+        def libraryJson = new File('src/test/resources/json/library.json')
+
+        def conf = new File(base, 'config.conf').tap { text = libraryJson.text }
+
+        when:
+        def config = Loader.load(conf)
+
+        then:
+
+        println config.root().render(ConfigRenderOptions.concise().tap { formatted = true })
+
+        config.getConfig('library').getConfigList('books').size() == 2
+        config.getConfig('library').getConfigList('books').get(1).getInt('pages') == 330
+        (config.getConfig('library').getConfigList('books').get(1).
+                getList('authors').get(0) as ConfigObject).get('lastName').toString() == 'Quoted("Jackson Suzy")'
+
+    }
+
+
+    def "test simple substitution"() {
+        setup:
+        def conf = new File(base, 'config.conf').tap {
+            text = '''
 			{
 				"" : {  "" : { "" : 42 } },
 				"42_a" : ${""."".""},
@@ -101,22 +101,22 @@ class ConfUtilTest extends AbstractTest {
 				"-" : 261
 			}
 			'''.stripIndent()
-		}
+        }
 
-		when:
-		def config = Loader.load(conf)
+        when:
+        def config = Loader.load(conf)
 
-		then:
-		//println ConfUtil.configToJson(config).toString()
-		config.getConfig("103_D").getInt('e') == 103
-		config.getConfig("103_E").getConfig('f').getInt('e') == 103
+        then:
+        //println ConfUtil.configToJson(config).toString()
+        config.getConfig("103_D").getInt('e') == 103
+        config.getConfig("103_E").getConfig('f').getInt('e') == 103
 
-	}
+    }
 
-	def "test chained substitution"() {
-		setup:
-		def conf = new File(base, 'config.conf').tap {
-			text = '''
+    def "test chained substitution"() {
+        setup:
+        def conf = new File(base, 'config.conf').tap {
+            text = '''
 			{
 				"mainSuffix": "suffix",
 				"sub": {
@@ -128,21 +128,21 @@ class ConfUtilTest extends AbstractTest {
 				},
 			}
 			'''.stripIndent()
-		}
+        }
 
-		when:
-		def config = Loader.load(conf)
+        when:
+        def config = Loader.load(conf)
 
-		then:
-		println config.root().render(ConfigRenderOptions.concise().tap { formatted = true })
-		config.getConfig("sub2").getValue('concat2').unwrapped() == 'suffixMore'
+        then:
+        println config.root().render(ConfigRenderOptions.concise().tap { formatted = true })
+        config.getConfig("sub2").getValue('concat2').unwrapped() == 'suffixMore'
 
-	}
+    }
 
-	def "test simpler substitution"() {
-		setup:
-		def conf = new File(base, 'config.conf').tap {
-			text = '''
+    def "test simpler substitution"() {
+        setup:
+        def conf = new File(base, 'config.conf').tap {
+            text = '''
 				{
 					"a.b.c" : 103,
 					"103_a" : ${"a.b.c"},
@@ -150,34 +150,51 @@ class ConfUtilTest extends AbstractTest {
 					"103_E" : { "f": ${"103_D"} },
 				}
 				'''.stripIndent()
-		}
+        }
 
-		when:
-		def config = Loader.load(conf)
+        when:
+        def config = Loader.load(conf)
 
-		then:
-		//println ConfUtil.configToJson(config).toString()
-		config.getConfig("103_D").getInt('e') == 103
-		config.getConfig("103_E").getConfig('f').getInt('e') == 103
+        then:
+        //println ConfUtil.configToJson(config).toString()
+        config.getConfig("103_D").getInt('e') == 103
+        config.getConfig("103_E").getConfig('f').getInt('e') == 103
+    }
 
-	}
+    def "test identifier replacement"() {
+        setup:
+        def words
+
+        when:
+        words = [
+                '323'    : '_323',
+                'default': '_default',
+                'case'    : '_case'
+        ]
+
+        then:
+        words.each {
+            String converted = ConfUtil.ident(it.key, false, false, false)
+            assert converted == it.value
+        }
+    }
 
 
-	static class Library {
-		String name
-		List<Book> books
-	}
+    static class Library {
+        String name
+        List<Book> books
+    }
 
-	static class Book {
-		String title
-		Integer pages
-		String ISBN
-		List<Author> authors
-	}
+    static class Book {
+        String title
+        Integer pages
+        String ISBN
+        List<Author> authors
+    }
 
-	static class Author {
-		String firstName
-		String lastName
-	}
+    static class Author {
+        String firstName
+        String lastName
+    }
 
 }

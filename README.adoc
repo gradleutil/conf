@@ -1,0 +1,6 @@
+# conf
+
+image::https://github.com/gradleutil/conf/workflows/Build%20master%20branch/badge.svg[link=https://github.com/gradleutil/conf/actions?query=workflow%3A%22Build+master+branch%22, alt=Badge]
+
+Using json and json-schema to configure stuff
+
