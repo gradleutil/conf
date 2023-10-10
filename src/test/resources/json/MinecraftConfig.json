@@ -1,5 +1,5 @@
 {
-  "$schema": "../../../main/resources/schema/MinecraftConfig.schema.json",
+  "$schema": "MinecraftConfig.schema.json",
   "name": "my nice minecraft config",
   "publishing": [
     {
@@ -21,7 +21,7 @@
           "slug": "atmosphere",
           "id": "nothanks",
           "description": "this is a  lot of text",
-          "modArtifacts": [
+          "artifacts": [
             {
               "name": "name",
               "version": "234",

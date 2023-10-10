@@ -5,7 +5,7 @@ import com.typesafe.config.ConfigRenderOptions
 import net.gradleutil.conf.AbstractTest
 import net.gradleutil.conf.Loader
 
-import static net.gradleutil.conf.Loader.defaultOptions
+import static net.gradleutil.conf.Loader.loaderOptions
 
 class ConfUtilTest extends AbstractTest {
 
@@ -22,6 +22,9 @@ class ConfUtilTest extends AbstractTest {
 						"moreDoors": "\${car.doors.number}"
 						"inString": "in \${car.doors.number} ling"
 					},
+					"doors": {
+						"number": 4
+					}
 					"doors": {
 						"number": 4
 					}
@@ -48,12 +51,12 @@ class ConfUtilTest extends AbstractTest {
     def "test substitutions in json to object strings"() {
         setup:
         def libraryJson = new File('src/test/resources/json/library.json')
-
         def conf = new File(base, 'config.conf').tap { text = libraryJson.text }
+        println "file:///${libraryJson.absolutePath}"
 
         when:
         def config = Loader.load(conf)
-        def library = Loader.create(config, Library, defaultOptions().silent(false))
+        def library = Loader.create(config, Library, loaderOptions().silent(false))
 
         then:
         library.books.size() == 2
@@ -187,6 +190,7 @@ class ConfUtilTest extends AbstractTest {
 
     static class Book {
         String title
+        String description
         Integer pages
         String ISBN
         List<Author> authors

@@ -6,17 +6,17 @@ import org.json.JSONObject
 class SchemaToReferenceSchema {
 
     static ReferenceSchema schemaToReferenceSchema(Schema schema, String ref, String schemaProperty = 'http://json-schema.org/draft-07/schema#') {
-        def referenceBuilder = ReferenceSchema.builder().tap { refValue("#/definitions/${ref}") }
+        ReferenceSchema.Builder referenceBuilder = ReferenceSchema.builder().tap { refValue("#/definitions/" + ref) }
         referenceBuilder.unprocessedProperties.put('$schema', schemaProperty)
-        def referenceSchema = toReferenceSchema(referenceBuilder, schema, ref)
+        ReferenceSchema referenceSchema = toReferenceSchema(referenceBuilder, schema, ref)
         setUnprocessedPropertyDefinitions(referenceSchema)
         referenceSchema
     }
 
 
     static void setUnprocessedPropertyDefinitions(Schema referenceSchema){
-        def  definitions =   [:] as Map<String, Object>
-        def visitor = new GeneratorVisitor(){
+        Map<String, Object> definitions =   [:] as Map<String, Object>
+        GeneratorVisitor visitor = new GeneratorVisitor(){
             @Override
             void visit(Schema schema) {
                 if(schema instanceof ReferenceSchema){
@@ -32,7 +32,7 @@ class SchemaToReferenceSchema {
 
     @SuppressWarnings('GroovyAccessibility')
     static String getRef(ReferenceSchema schema) {
-        def ref = schema.refValue.toString().split('/')?.last()
+        String ref = schema.refValue.toString().split('/')?.last()
         return ref
     }
 
@@ -41,18 +41,18 @@ class SchemaToReferenceSchema {
     }
 
     static ReferenceSchema toReferenceSchema(Schema schema, String ref, String schemaProperty = null) {
-        def referenceBuilder = ReferenceSchema.builder().tap { refValue("#/definitions/${ref}") }
+        ReferenceSchema.Builder referenceBuilder = ReferenceSchema.builder().tap { refValue("#/definitions/" + ref) }
         getReferenceSchema(referenceBuilder, schema , ref)
     }
 
     static ReferenceSchema getReferenceSchema(Schema.Builder<ReferenceSchema> referenceBuilder, Schema schema, String ref) {
-        def referenceSchema
+        ReferenceSchema referenceSchema
         if (schema instanceof ObjectSchema) {
             referenceSchema = buildReferenceSchema(ref, referenceBuilder, schema as ObjectSchema)
         } else if (schema instanceof CombinedSchema) {
             referenceSchema = buildReferenceSchema(referenceBuilder, schema as CombinedSchema)
         } else {
-            throw new RuntimeException("Ahhhhhhhhhhhhhhhhhhhhhh ${schema.class}")
+            throw new RuntimeException("Ahhhhhhhhhhhhhhhhhhhhhh" + schema.class)
         }
         referenceSchema
     }
@@ -64,20 +64,20 @@ class SchemaToReferenceSchema {
 
         sourceObjectSchema.propertySchemas.each { String key, Schema propertySchema ->
             if (propertySchema instanceof ObjectSchema) {
-                def refSchema = toReferenceSchema(propertySchema as ObjectSchema, key)
+                ReferenceSchema refSchema = toReferenceSchema(propertySchema as ObjectSchema, key)
                 objectBuilder.addPropertySchema(key, refSchema)
             } else if (propertySchema instanceof ArraySchema) {
-                def firstItem = propertySchema.allItemSchema ?: propertySchema.itemSchemas?.first()
+                Schema firstItem = propertySchema.allItemSchema ?: propertySchema.itemSchemas?.first()
                 if(firstItem instanceof ObjectSchema){
-                    def firstProp = firstItem.propertySchemas.entrySet().first()
+                    Map.Entry<String, Schema> firstProp = firstItem.propertySchemas.entrySet().first()
                     if(firstItem.propertySchemas.size() == 1  && firstProp.value instanceof ObjectSchema){
                         // single keyed array item infers sub-object, so use the key for the field name and add the sub-object type
-                        def refSchema = toReferenceSchema(firstProp.value, firstProp.key)
-                        def arraySchema = ArraySchema.builder().allItemSchema(refSchema).build()
+                        ReferenceSchema refSchema = toReferenceSchema(firstProp.value, firstProp.key)
+                        ArraySchema arraySchema = ArraySchema.builder().allItemSchema(refSchema).build()
                         objectBuilder.addPropertySchema(key, arraySchema)
                     } else {
-                        def refSchema = toReferenceSchema(firstItem as ObjectSchema, key)
-                        def arraySchema = ArraySchema.builder().allItemSchema(refSchema).build()
+                        ReferenceSchema refSchema = toReferenceSchema(firstItem as ObjectSchema, key)
+                        ArraySchema arraySchema = ArraySchema.builder().allItemSchema(refSchema).build()
                         objectBuilder.addPropertySchema(key, arraySchema)
                     }
                 } else {

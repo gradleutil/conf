@@ -97,7 +97,7 @@ class ConfUtil {
         if (!confString) {
             throw new IllegalArgumentException("conf is required")
         }
-        def options = Loader.defaultOptions()
+        def options = Loader.loaderOptions()
                 .allowUnresolved(ignoreMissingProperties)
                 .silent(silent)
                 .confString(confString)
@@ -118,7 +118,7 @@ class ConfUtil {
         if (!conf.exists()) {
             throw new IllegalArgumentException("conf ${conf.absolutePath} does not exist")
         }
-        def options = Loader.defaultOptions()
+        def options = Loader.loaderOptions()
                 .allowUnresolved(ignoreMissingProperties)
                 .silent(true)
                 .conf(conf)
@@ -153,12 +153,12 @@ class ConfUtil {
      * @param singularize
      * @return a valid identifier (variable name) in at least java
      */
-    static ident(String string, Boolean convertToCamelCase = true, Boolean upperCamel = false, Boolean singularize) {
+    static String ident(String string, Boolean convertToCamelCase = true, Boolean upperCamel = false, Boolean singularize) {
         def id
         id = ReservedWordChecker.javaIdent(string.replace('$', ''))
 
         if (convertToCamelCase) {
-            id = Inflector.instance.camelCase(id, upperCamel, '-_ '.chars)
+            id = Inflector.instance.camelCase(id, upperCamel, '-_ '.toCharArray())
         } else {
             id = string.with { upperCamel ? it.capitalize() : it }
         }

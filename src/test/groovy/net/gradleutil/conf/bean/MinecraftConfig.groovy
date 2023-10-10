@@ -109,7 +109,7 @@ class Mod  implements Serializable {
     Mod(){ }
 
     @Optional
-    List<ModArtifact> modArtifacts = [] as List<ModArtifact>
+    List<ModArtifact> artifacts = [] as List<ModArtifact>
 
     String name
 

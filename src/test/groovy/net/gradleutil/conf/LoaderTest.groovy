@@ -1,8 +1,9 @@
 package net.gradleutil.conf
 
+
 import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigValue
-import net.gradleutil.conf.bean.PersonList
+
 
 import static net.gradleutil.conf.Loader.load
 
@@ -53,16 +54,14 @@ class LoaderTest extends AbstractTest {
 		when:
 		println 'file:///' + configFile.absolutePath
 		println 'file:///' + schemaFile.absolutePath
-		Loader.LoaderOptions opts = Loader.defaultOptions().silent(true)
+		LoaderOptions opts = Loader.loaderOptions().silent(true)
 				.confString(configFile.text)
 				.schemaFile(schemaFile)
 				.allowUnresolved(false)
 				.useSystemProperties(false)
-		def per = Loader.create(new PersonList(), load(opts as Loader.LoaderOptions), PersonList, opts)
 		def config = load(opts)
 
 		then:
-		per
 		config.hasPath('people')
 		def list = config.getList('people')
 		def cv = list.get(1).atKey('person')
@@ -71,6 +70,30 @@ class LoaderTest extends AbstractTest {
 		age.class.simpleName == 'ConfigNull'
 		(firstName as ConfigValue).unwrapped() == 'Jane'
 
+	}
+
+	def "royals loads"() {
+		setup:
+		def configFile = new File('src/test/resources/json/royalty.json')
+		def schemaFile = new File('src/test/resources/json/royalty.schema.json')
+
+		when:
+		println 'file:///' + configFile.absolutePath
+		println 'file:///' + schemaFile.absolutePath
+		LoaderOptions opts = Loader.loaderOptions().silent(true)
+				.confString(configFile.text)
+				.schemaFile(schemaFile)
+				.allowUnresolved(false)
+				.useSystemProperties(false)
+		def config = load(opts)
+
+		then:
+		config.hasPath('royalty')
+		def royalty = config.getConfig('royalty')
+		def list = royalty.getList('children')
+		def cv = list.get(0).atKey('child')
+		def firstName = cv.getValue('child')['name']
+		(firstName as ConfigValue).unwrapped() == 'Charles'
 	}
 
 	def "test bad json"() {
@@ -97,5 +120,8 @@ class LoaderTest extends AbstractTest {
 		then:
 		final ConfigException.Parse exception = thrown()
 	}
+
+
+
 
 }
