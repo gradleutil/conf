@@ -1,12 +1,24 @@
 package net.gradleutil.conf.util
 
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.node.ObjectNode
+import com.github.victools.jsonschema.generator.Option
+import com.github.victools.jsonschema.generator.OptionPreset
+import com.github.victools.jsonschema.generator.SchemaBuilder
+import com.github.victools.jsonschema.generator.SchemaGeneratorConfig
+import com.github.victools.jsonschema.generator.SchemaGeneratorConfigBuilder
+import com.github.victools.jsonschema.generator.SchemaVersion
+import com.github.victools.jsonschema.generator.TypeContext
+import com.github.victools.jsonschema.generator.impl.TypeContextFactory
+import com.squareup.moshi.JsonAdapter
+import com.squareup.moshi.Moshi
 import com.typesafe.config.*
 import com.typesafe.config.parser.ConfigDocument
 import com.typesafe.config.parser.ConfigDocumentFactory
 import net.gradleutil.conf.BeanConfigLoader
 import net.gradleutil.conf.Loader
 import net.gradleutil.conf.config.impl.ConfigObjectVisitor
-import net.gradleutil.conf.json.JsonObject
 
 import java.nio.file.*
 import java.nio.file.attribute.BasicFileAttributes
@@ -32,8 +44,8 @@ class ConfUtil {
         return jsonString
     }
 
-    static JsonObject configToJsonObject(Config configObject, String path = '') {
-        return new JsonObject(configToJson(configObject, path))
+    static JsonNode configToJsonObject(Config configObject, String path = '') {
+        return new ObjectMapper().readTree(configToJson(configObject, path))
     }
 
     static URL getResourceUrl(ClassLoader classLoader, String resourcePath) {
@@ -84,6 +96,18 @@ class ConfUtil {
         Paths.get(uri)
     }
 
+
+    /**
+     * convert a bean into JSON
+     * @param bean
+     */
+    static String beanToJson(Object bean) {
+        Moshi moshi = new Moshi.Builder().build()
+        JsonAdapter<Object> jsonAdapter = moshi.adapter(bean.class)
+        String json = jsonAdapter.toJson(bean);
+        System.out.println(json);
+        json
+    }
 
     /**
      * sets bean from conf, NOT ignoring missing properties and NOT using system props

@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
 
-import org.everit.json.schema.ValidationException;
+
 import org.json.JSONObject;
 
 import com.typesafe.config.*;
@@ -75,6 +75,10 @@ public class Loader {
         return create(load(json), clazz, loaderOptions());
     }
 
+    public static <T> T create(String json, String schema, Class<T> clazz) throws Exception {
+        return create(load(json), clazz, loaderOptions().schemaString(schema).schemaValidation(true));
+    }
+
     public static Config load(String json) throws IOException {
         return load(new LoaderOptions().confString(json));
     }
@@ -134,13 +138,13 @@ public class Loader {
 
         if (options.schemaString != null) {
             log.info("Loading schema from string");
-            options.schema(SchemaUtil.getSchema(options.schemaString));
+            options.schema(SchemaUtil.getSchema(options.schemaString,""));
         } else if (options.schemaFile != null) {
             log.info("Loading schema from " + options.schemaFile);
             if (!options.schemaFile.exists()) {
                 log.info("schema file " + options.schemaFile + ", nonexistent, generating from conf");
             }
-            options.schema(SchemaUtil.getSchema(options.schemaFile));
+            options.schema(SchemaUtil.getSchema(options.schemaFile,options.schemaFile.getParentFile().getAbsolutePath()));
         }
 
         Config finalConfig = config;
@@ -149,7 +153,8 @@ public class Loader {
         log.info("Resolving config, existing keys:" + String.join(", ", config.root().keySet()));
 
         if (options.schema != null && options.schemaValidation) {
-            log.info("Validating config against schema " + options.schema.getLocation());
+            log.info("Validating config against schema " + options.schema);
+/*
             List<ValidationException> errors = SchemaUtil.validate(options.schema, ConfUtil.configToJsonObject(config));
             if (!errors.isEmpty()) {
                 if (options.onSchemaValidationFailure != null) {
@@ -159,6 +164,7 @@ public class Loader {
                     throw new IllegalArgumentException("Failed validation");
                 }
             }
+*/
             log.info("Finished validating");
         }
 

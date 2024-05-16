@@ -1,9 +1,8 @@
 package net.gradleutil.conf;
 
+import com.networknt.schema.JsonSchema;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigRenderOptions;
-import org.everit.json.schema.Schema;
-import org.everit.json.schema.ValidationException;
 
 import java.io.File;
 import java.util.List;
@@ -24,10 +23,9 @@ public class LoaderOptions {
     public File reference = null;
     public File confOverride = null;
     public File schemaFile = null;
-    public Schema schema = null;
+    public JsonSchema schema = null;
     public String schemaString = null;
     public Boolean schemaValidation = true;
-    public Consumer<List<ValidationException>> onSchemaValidationFailure = null;
     public String schemaName = "schema.json";
     public String className = "Config";
     public String packageName = "conf.configuration";
@@ -125,7 +123,7 @@ public class LoaderOptions {
         return this;
     }
 
-    public LoaderOptions schema(Schema schema) {
+    public LoaderOptions schema(JsonSchema schema) {
         this.schema = schema;
         return this;
     }
@@ -137,11 +135,6 @@ public class LoaderOptions {
 
     public LoaderOptions schemaValidation(Boolean schemaValidation) {
         this.schemaValidation = schemaValidation;
-        return this;
-    }
-
-    public LoaderOptions onSchemaValidationFailure(Consumer<List<ValidationException>> onSchemaValidationFailure) {
-        this.onSchemaValidationFailure = onSchemaValidationFailure;
         return this;
     }
 

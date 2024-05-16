@@ -4,6 +4,7 @@ package net.gradleutil.conf.util
 import com.typesafe.config.ConfigRenderOptions
 import net.gradleutil.conf.AbstractTest
 import net.gradleutil.conf.Loader
+import net.gradleutil.conf.json.schema.SchemaUtil
 
 import static net.gradleutil.conf.Loader.loaderOptions
 
@@ -60,6 +61,84 @@ class ConfUtilTest extends AbstractTest {
 
         then:
         library.books.size() == 2
+
+    }
+
+    def "test order in json to object strings"() {
+        setup:
+        def libraryJsonFile = new File('src/test/resources/json/server.schema.json')
+        def libraryJson = libraryJsonFile.text
+        println "file:///${libraryJsonFile.absolutePath}"
+
+        when:
+        def config = Loader.load(libraryJson)
+        def schema = SchemaUtil.getSchema(libraryJson,"")
+
+        then:
+        schema.getSchemaNode().size() == 3
+        config.getConfig('definitions').entrySet().size() == 135
+
+    }
+
+    def "test object to schema"() {
+        setup:
+        def library = new Library()
+
+        when:
+        def schema = SchemaUtil.getSchema(library.class).schemaNode
+
+        then:
+        schema.size() == 4
+
+    }
+
+    def "test config to schema"() {
+        setup:
+        def libraryJsonFile = new File('src/test/resources/json/library.json')
+        def libraryJson = libraryJsonFile.text
+        println "file:///${libraryJsonFile.absolutePath}"
+
+        when:
+        def config = Loader.load(libraryJson)
+        def schema = SchemaUtil.getSchema(config, 'libraries', "")
+        def conf = new File(base, 'config.schema.json').tap { text = schema.schemaNode.toPrettyString() }
+        println "file:///${conf.absolutePath}"
+
+        then:
+        schema.schemaNode.size() == 3
+
+    }
+
+    def "test referenced file schema"() {
+        setup:
+        def libraryJsonFile = new File('src/test/resources/json/people.schema.json')
+        def libraryJson = libraryJsonFile.text
+        println "file:///${libraryJsonFile.absolutePath}"
+
+        when:
+        def schema = SchemaUtil.getSchema(libraryJson, libraryJsonFile.parentFile.absolutePath)
+        schema.walk(null, false);
+        println schema.schemaNode.toPrettyString()
+
+        then:
+        schema.schemaNode.get('definitions').size() == 2
+
+    }
+
+    def "test beanToJson"() {
+        setup:
+        def libraryJson = new File('src/test/resources/json/library.json')
+        def conf = new File(base, 'config.conf').tap { text = libraryJson.text }
+        println "file:///${libraryJson.absolutePath}"
+
+        when:
+        def config = Loader.load(conf)
+        def library = Loader.create(config, Library, loaderOptions().silent(false))
+
+        then:
+        library.books.size() == 2
+        def json = ConfUtil.beanToJson(library)
+        json.startsWith('{"books":[{"ISBN":')
 
     }
 

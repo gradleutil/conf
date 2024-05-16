@@ -1,21 +1,24 @@
 package net.gradleutil.conf.json.schema;
 
 import java.io.*;
+import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
-import org.everit.json.schema.*;
-import org.everit.json.schema.loader.SchemaLoader;
-import org.json.JSONTokener;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.victools.jsonschema.generator.*;
+import com.networknt.schema.*;
+import com.typesafe.config.Config;
 
-import net.gradleutil.conf.json.JsonObject;
+import net.gradleutil.conf.util.ConfUtil;
 
-public class SchemaUtil extends SchemaLoader {
 
-    public SchemaUtil(SchemaLoaderBuilder builder) {
-        super(builder);
-    }
+public class SchemaUtil {
+
 
     /**
      * Get JSON schema from JSON file.
@@ -24,8 +27,49 @@ public class SchemaUtil extends SchemaLoader {
      * @return Schema
      * @throws IOException if file cannot be read
      */
-    public static Schema getSchema(File json) throws IOException {
-        return getSchema(new String(Files.readAllBytes(json.toPath())));
+    public static JsonSchema getSchema(File json, String basePath) throws IOException {
+        return getSchema(new String(Files.readAllBytes(json.toPath())), true, basePath);
+    }
+
+
+    private static JsonSchemaFactory getFactory() {
+        return JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012, builder ->
+                builder.schemaMappers(schemaMappers ->
+                        schemaMappers.mapPrefix("https://www.example.org/", "classpath:json/")
+                )
+        );
+    }
+
+    private static SchemaValidatorsConfig getSchemaValidatorsConfig(Boolean applyDefaults, String basePath) {
+        ApplyDefaultsStrategy applyDefaultsStrategy = new ApplyDefaultsStrategy(applyDefaults, true, true);
+        SchemaValidatorsConfig schemaValidatorsConfig = new SchemaValidatorsConfig();
+        schemaValidatorsConfig.setApplyDefaultsStrategy(applyDefaultsStrategy);
+        schemaValidatorsConfig.addKeywordWalkListener("$ref", new RefWalker(basePath));
+        return schemaValidatorsConfig;
+    }
+
+
+    /**
+     * Get JSON schema from JSON string.
+     *
+     * @param json        JSON string
+     * @param useDefaults use defaults
+     * @return Schema
+     */
+    public static JsonSchema getSchema(String json, boolean useDefaults, String basePath) {
+        illegalIfNull(json, "Schema could not be parsed: " + json);
+        try {
+            return getSchema(new ObjectMapper().readTree(json), useDefaults, basePath);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static JsonSchema getSchema(JsonNode json, Boolean applyDefaults, String basePath) {
+        illegalIfNull(json, "Schema could not be parsed: " + json);
+        JsonSchema schema = getFactory().getSchema(json, getSchemaValidatorsConfig(applyDefaults, basePath));
+        schema.walk(null, false);
+        return schema;
     }
 
     /**
@@ -36,10 +80,10 @@ public class SchemaUtil extends SchemaLoader {
      * @param extension of /schema file
      * @return Schema
      */
-    public static Schema getInternalSchema(String name, String basePath, String extension) {
+    public static JsonSchema getInternalSchema(String name, String basePath, String extension) {
         String schemaJsonName = basePath + name + extension;
         InputStream inputStream = SchemaUtil.class.getResourceAsStream(schemaJsonName);
-        return getSchema(inputStream, schemaJsonName);
+        return getSchema(inputStream, schemaJsonName, basePath);
     }
 
     /**
@@ -49,7 +93,7 @@ public class SchemaUtil extends SchemaLoader {
      * @param basePath of /schema file
      * @return Schema
      */
-    public static Schema getInternalSchema(String name, String basePath) {
+    public static JsonSchema getInternalSchema(String name, String basePath) {
         return SchemaUtil.getInternalSchema(name, basePath, ".json");
     }
 
@@ -59,7 +103,7 @@ public class SchemaUtil extends SchemaLoader {
      * @param name of /schema file (.json is appended)
      * @return Schema
      */
-    public static Schema getInternalSchema(String name) {
+    public static JsonSchema getInternalSchema(String name) {
         return SchemaUtil.getInternalSchema(name, "/schema/", ".json");
     }
 
@@ -71,12 +115,16 @@ public class SchemaUtil extends SchemaLoader {
      * @param useDefaults use defaults
      * @return Schema
      */
-    public static Schema getSchema(InputStream inputStream, String name, boolean useDefaults) {
-        JsonObject rawSchema;
+    public static JsonSchema getSchema(InputStream inputStream, String name, boolean useDefaults, String basePath) {
         illegalIfNull(inputStream, "Could not load resource: " + name);
-        rawSchema = new JsonObject(new JSONTokener(inputStream));
-        illegalIfNull(rawSchema, "Internal Schema was empty or could not be parsed: " + name);
-        return SchemaLoader.builder().useDefaults(useDefaults).schemaJson(rawSchema).build().load().build();
+        JsonSchema jsonSchema;
+        try {
+            jsonSchema = getSchema(readFromInputStream(inputStream), useDefaults, basePath);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        illegalIfNull(jsonSchema, "Internal Schema was empty or could not be parsed: " + name);
+        return jsonSchema;
     }
 
     /**
@@ -86,8 +134,8 @@ public class SchemaUtil extends SchemaLoader {
      * @param name        of /schema file (.json is appended)
      * @return Schema
      */
-    public static Schema getSchema(InputStream inputStream, String name) {
-        return SchemaUtil.getSchema(inputStream, name, true);
+    public static JsonSchema getSchema(InputStream inputStream, String name, String basePath) {
+        return getSchema(inputStream, name, true, basePath);
     }
 
     /**
@@ -96,66 +144,55 @@ public class SchemaUtil extends SchemaLoader {
      * @param inputStream of /schema file (.json is appended)
      * @return Schema
      */
-    public static Schema getSchema(InputStream inputStream) {
-        return SchemaUtil.getSchema(inputStream, "inputstream.schema.json", true);
+    public static JsonSchema getSchema(InputStream inputStream) {
+        return getSchema(inputStream, "inputstream.schema.json", true, "");
+    }
+
+    public static JsonSchema getSchema(String json, String basePath) {
+        illegalIfNull(json, "Schema could not be parsed: " + json);
+        return getSchema(json, true, basePath);
     }
 
     /**
-     * Get JSON schema from JSON string.
+     * Get JSON schema from Object.
      *
-     * @param json        JSON string
-     * @param useDefaults use defaults
-     * @param refName     reference name
+     * @param objectClass JSON string
      * @return Schema
      */
-    public static Schema getSchema(String json, boolean useDefaults, String refName) {
-        JsonObject rawSchema = JsonObjectFromString(json);
-        illegalIfNull(rawSchema, "Schema could not be parsed: " + json);
-        Schema schema = SchemaLoader.builder().useDefaults(useDefaults).schemaJson(rawSchema).build().load().build();
-        if (!refName.isEmpty() && !(schema instanceof ReferenceSchema || schema instanceof CombinedSchema)) {
-            return SchemaToReferenceSchema.toReferenceSchema(schema, refName);
+    public static JsonSchema getSchema(Type objectClass) {
+        SchemaGeneratorConfigBuilder configBuilder = new SchemaGeneratorConfigBuilder(SchemaVersion.DRAFT_7, OptionPreset.PLAIN_JSON);
+        configBuilder.with(Option.DEFINITIONS_FOR_ALL_OBJECTS);
+        SchemaGeneratorConfig config = configBuilder.build();
+        SchemaGenerator generator = new com.github.victools.jsonschema.generator.SchemaGenerator(config);
+        return getSchema(generator.generateSchema(objectClass), true,"");
+    }
+
+
+    public static JsonSchema getSchema(Config configObject, String refName, String basePath) {
+        try {
+            String schema = new JsonSchemaWriter().getJsonSchema(ConfUtil.configToJson(configObject), refName);
+            return getSchema(schema, true, basePath);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
-
-        return schema;
-    }
-
-    /**
-     * Get JSON schema from JSON string.
-     *
-     * @param json        JSON string
-     * @param useDefaults use defaults
-     * @return Schema
-     */
-    public static Schema getSchema(String json, boolean useDefaults) {
-        return SchemaUtil.getSchema(json, useDefaults, "");
-    }
-
-    /**
-     * Get JSON schema from JSON string.
-     *
-     * @param json JSON string
-     * @return Schema
-     */
-    public static Schema getSchema(String json) {
-        return SchemaUtil.getSchema(json, true, "");
     }
 
     /**
      * Get JSON schema from JSON file.
      *
-     * @param json file
-     * @return Schema
+     * @param json
+     * @return JsonNode
      */
-    public static JsonObject JsonObjectFromString(final String json) {
+    public static JsonNode jsonObjectFromString(final String json) {
         illegalIfNull(json, "json is empty");
-        JsonObject JsonObject;
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode jsonNode;
         try {
-            JsonObject = new JsonObject(json);
-        } catch (Exception e) {
-            throw new IllegalArgumentException("Could not parse script text:\n" + json, e);
+            jsonNode = objectMapper.readTree(json);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
         }
-
-        return JsonObject;
+        return jsonNode;
     }
 
     /**
@@ -164,8 +201,8 @@ public class SchemaUtil extends SchemaLoader {
      * @param e ValidationException
      * @return List
      */
-    public static List<ValidationException> getExceptions(ValidationException e) {
-        final ArrayList<ValidationException> exceptions = new ArrayList<>();
+    public static List<ValidationMessage> getExceptions(ValidationMessage e) {
+        final ArrayList<ValidationMessage> exceptions = new ArrayList<>();
         exceptions.add(e);
         return exceptions;
     }
@@ -177,16 +214,8 @@ public class SchemaUtil extends SchemaLoader {
      * @param json   to validate
      * @return List
      */
-    public static List<ValidationException> validate(Schema schema, JsonObject json) {
-        ArrayList<ValidationException> exceptions = new ArrayList<>();
-        try {
-            Validator validator = Validator.builder().primitiveValidationStrategy(PrimitiveValidationStrategy.LENIENT).build();
-            validator.performValidation(schema, json);
-        } catch (ValidationException e) {
-            exceptions.addAll(getExceptions(e));
-        }
-
-        return exceptions;
+    public static Set<ValidationMessage> validate(JsonSchema schema, JsonNode json) {
+        return schema.validate(json);
     }
 
     /**

@@ -81,15 +81,13 @@ class BeanLoaderTest extends AbstractTest {
 
     }
 
-    def "test soyal java bean"() {
+    def "test server java bean"() {
         setup:
         def configFile = new File('src/test/resources/json/server.json')
 
         when:
         println "loading file://${configFile.absolutePath}"
-        Server royalty = new Server();
         Config conf = Loader.load(new File("src/test/resources/json/server.json"), new File("src/test/resources/json/server.schema.json"));
-        Server server = new Server();
         Server serverOptions = Loader.create(conf, Server.class, Loader.loaderOptions().config(conf).silent(false));
 
         then:
