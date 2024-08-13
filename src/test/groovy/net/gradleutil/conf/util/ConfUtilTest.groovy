@@ -121,7 +121,23 @@ class ConfUtilTest extends AbstractTest {
         println schema.schemaNode.toPrettyString()
 
         then:
-        schema.schemaNode.get('definitions').size() == 2
+        schema.schemaNode.get('definitions').size() == 1
+
+    }
+
+    def "test referenced sub schema file schema"() {
+        setup:
+        def libraryJsonFile = new File('src/test/resources/json/ref-server.schema.json')
+        def libraryJson = libraryJsonFile.text
+        println "file:///${libraryJsonFile.absolutePath}"
+
+        when:
+        def schema = SchemaUtil.getSchema(libraryJson, libraryJsonFile.parentFile.absolutePath)
+        schema.walk(null, false);
+        println schema.schemaNode.toPrettyString()
+
+        then:
+        schema.schemaNode.get('definitions').size() == 1
 
     }
 

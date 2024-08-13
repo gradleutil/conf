@@ -3,6 +3,7 @@ package net.gradleutil.conf;
 import java.beans.*;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -69,16 +70,28 @@ public class BeanConfigLoader {
                             Object[] consts = firstParam.getType().getEnumConstants();
                             Object eVal = Arrays.stream(consts).filter(c -> c.toString().equals(value)).findFirst().orElse(null);
                             setter.invoke(bean, eVal);
-                        } else if (firstParam.getType().getSimpleName().equals("BigInteger")) {
-                            setter.invoke(bean, BigInteger.valueOf(Long.parseLong(value.toString())));
-                        } else if (firstParam.getType().getSimpleName().equals("Integer")) {
-                            setter.invoke(bean, Integer.parseInt(value.toString()));
-                        } else if (firstParam.getType().getSimpleName().equals("Long")) {
-                            setter.invoke(bean, Long.parseLong(value.toString()));
-                        } else if (firstParam.getType().getSimpleName().equals("String")) {
-                            setter.invoke(bean, value.toString());
                         } else {
-                            setter.invoke(bean, value);
+                            final String simpleName = firstParam.getType().getSimpleName();
+                            switch (simpleName) {
+                                case "BigDecimal":
+                                    setter.invoke(bean, BigDecimal.valueOf(Double.parseDouble(value.toString())));
+                                    break;
+                                case "BigInteger":
+                                    setter.invoke(bean, BigInteger.valueOf(Long.parseLong(value.toString())));
+                                    break;
+                                case "Integer":
+                                    setter.invoke(bean, Integer.parseInt(value.toString()));
+                                    break;
+                                case "Long":
+                                    setter.invoke(bean, Long.parseLong(value.toString()));
+                                    break;
+                                case "String":
+                                    setter.invoke(bean, value.toString());
+                                    break;
+                                default:
+                                    setter.invoke(bean, value);
+                                    break;
+                            }
                         }
                     } catch (Exception e) {
                         throw new Exception("Unable to set " + key + "=" + value, e);

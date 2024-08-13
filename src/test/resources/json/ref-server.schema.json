@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$ref": "#/definitions/appList",
+  "definitions": {
+    "appList": {
+      "properties": {
+        "apps": {
+          "type": "array",
+          "items": {
+            "$ref": "server.schema.json#/definitions/app"
+          },
+          "default": []
+        }
+      }
+    }
+  }
+}

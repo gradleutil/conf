@@ -105,8 +105,7 @@ class ConfUtil {
         Moshi moshi = new Moshi.Builder().build()
         JsonAdapter<Object> jsonAdapter = moshi.adapter(bean.class)
         String json = jsonAdapter.toJson(bean);
-        System.out.println(json);
-        json
+        return json
     }
 
     /**
