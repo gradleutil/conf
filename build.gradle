@@ -28,8 +28,6 @@ def getScmVersion = {
 
 version = project.findProperty('version') != 'unspecified' ? project.version : getScmVersion() ?: '0.0.1-SNAPSHOT'
 group = 'net.gradleutil'
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
 
 file('VERSION').text.with { versionText ->
     if (!versionText == version) {
